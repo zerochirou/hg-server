@@ -1,0 +1,62 @@
+### HyperGrid API - Crash Test Pipeline
+### Gunakan VS Code REST Client atau JetBrains HTTP Client untuk menjalankan file ini.
+
+@baseUrl = http://localhost:4000/api
+@deviceId = dev-pixel-7-tester
+
+### ==========================================================================
+### SCENARIO 1: Driver 1 Melewati Jl. Sudirman dan mendeteksi Pothole A
+### ==========================================================================
+
+# @name createDriver1Detection
+POST {{baseUrl}}/detections
+Content-Type: application/json
+
+{
+  "deviceId": "{{deviceId}}-driver-1",
+  "latitude": -6.208800,
+  "longitude": 106.845600,
+  "confidence": 0.85,
+  "speedKmh": 45.0,
+  "zAccelPeak": 3.85,
+  "modelVersion": "v1.0",
+  "detectedAt": "2026-09-01T12:00:00.000Z"
+}
+
+### ==========================================================================
+### SCENARIO 2: Cek Bounding Box Peta
+### Ekspektasi: Muncul 1 Pothole Cluster di titik Jl. Sudirman (detection_count: 1)
+### ==========================================================================
+
+# @name checkBoundingBox1
+GET {{baseUrl}}/pothole-clusters?minLat=-6.2200&minLon=106.8300&maxLat=-6.2000&maxLon=106.8600&status=active
+Accept: application/json
+
+### ==========================================================================
+### SCENARIO 3: Driver 2 Melewati lubang yang SAMA (Jarak hanya selisih 5 meter dari titik pertama)
+### Backend HANYA boleh melakukan update cluster (Auto Clustering)
+### ==========================================================================
+
+# @name createDriver2Detection
+POST {{baseUrl}}/detections
+Content-Type: application/json
+
+{
+  "deviceId": "{{deviceId}}-driver-2",
+  "latitude": -6.208820,
+  "longitude": 106.845620,
+  "confidence": 0.95,
+  "speedKmh": 50.0,
+  "zAccelPeak": 4.20,
+  "modelVersion": "v1.0",
+  "detectedAt": "2026-09-01T12:30:00.000Z"
+}
+
+### ==========================================================================
+### SCENARIO 4: Cek Bounding Box Peta Lagi
+### Ekspektasi: JUMLAH Cluster tetap 1, tapi `detection_count` naik jadi 2, dan `confidence_avg` berubah (rata-rata 0.85 & 0.95 menjadi 0.90)
+### ==========================================================================
+
+# @name checkBoundingBox2
+GET {{baseUrl}}/pothole-clusters?minLat=-6.2200&minLon=106.8300&maxLat=-6.2000&maxLon=106.8600&status=active
+Accept: application/json

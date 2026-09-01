@@ -1,0 +1,145 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  extensions = [postgis]
+}
+
+model User {
+  id            String  @id
+  name          String?
+  email         String  @unique
+  emailVerified Boolean @map("email_verified")
+  image         String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  sessions Session[]
+  accounts Account[]
+
+  @@map("users")
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime @map("expires_at")
+
+  token String @unique
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  ipAddress String? @map("ip_address")
+  userAgent String? @map("user_agent")
+
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model Account {
+  id String @id
+
+  accountId  String @map("account_id")
+  providerId String @map("provider_id")
+
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  accessToken  String? @map("access_token")
+  refreshToken String? @map("refresh_token")
+
+  expiresAt DateTime? @map("expires_at")
+  password  String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("accounts")
+}
+
+model Verification {
+  id String @id
+
+  identifier String
+  value      String
+
+  expiresAt DateTime @map("expires_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("verifications")
+}
+
+// ----------------------------------------------------
+// Detections Model
+// ----------------------------------------------------
+model Detection {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  deviceId     String   @map("device_id") @db.VarChar(100)
+  userId       String?  @map("user_id")
+  latitude     Float    @map("latitude")
+  longitude    Float    @map("longitude")
+
+  // PostGIS Generated Column
+  location     Unsupported("geometry(Point, 4326)")? @map("location")
+
+  confidence   Float    @map("confidence")
+  speedKmh     Float?   @map("speed_kmh")
+  zAccelPeak   Float?   @map("z_accel_peak")
+  modelVersion String   @default("v1") @map("model_version") @db.VarChar(20)
+  detectedAt   DateTime @map("detected_at") @db.Timestamptz
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@index([deviceId, detectedAt], map: "idx_detections_device_time")
+  @@index([location], type: Gist, map: "idx_detections_location")
+  @@map("detections")
+}
+
+// ----------------------------------------------------
+// Pothole Clusters Model
+// ----------------------------------------------------
+model PotholeCluster {
+  id              String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  centerLatitude  Float           @map("center_latitude")
+  centerLongitude Float           @map("center_longitude")
+
+  // PostGIS Generated Column
+  centerLocation  Unsupported("geometry(Point, 4326)")? @map("center_location")
+
+  severity        PotholeSeverity @default(medium) @map("severity")
+  confidenceAvg   Float           @map("confidence_avg")
+  detectionCount  Int?            @default(1) @map("detection_count")
+  status          PotholeStatus   @default(active) @map("status")
+  firstDetectedAt DateTime        @map("first_detected_at") @db.Timestamptz
+  lastDetectedAt  DateTime        @map("last_detected_at") @db.Timestamptz
+  updatedAt       DateTime        @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@index([centerLocation], type: Gist, map: "idx_potholes_location")
+  @@index([status], map: "idx_potholes_status")
+  @@map("pothole_clusters")
+}
+
+enum PotholeSeverity {
+  low
+  medium
+  high
+  severe
+
+  @@map("pothole_severity")
+}
+
+enum PotholeStatus {
+  active
+  verified
+  repaired
+  false_positive
+
+  @@map("pothole_status")
+}
