@@ -1,0 +1,26 @@
+### =========================================================================
+### HYPERGRID REALTIME DATA INGESTION PIPELINE (BULK DUMMY DETECTIONS)
+### =========================================================================
+
+@baseUrl = http://localhost:4000/api
+
+### 1. Ingest Batch Detections (Jabodetabek Arterial Roads)
+# Mengirim 33 deteksi sensor AI & accelerometer yang akan langsung
+# memicu auto-clustering PostGIS ke tabel pothole_clusters secara realtime.
+POST {{baseUrl}}/detections/batch
+Content-Type: application/json
+
+< ./dummy-detections-payload.json
+
+### 2. Verify Generated Clusters (Jabodetabek Bounding Box)
+# Mengambil daftar klaster pothole yang otomatis teragregasi
+GET {{baseUrl}}/pothole-clusters?minLat=-6.6500&minLon=106.6000&maxLat=-6.1000&maxLon=107.0500
+Content-Type: application/json
+
+### 3. Filter Severe Potholes Only (Sangat Parah)
+GET {{baseUrl}}/pothole-clusters?severity=severe
+Content-Type: application/json
+
+### 4. Find Nearby Potholes (Radius 5000m dari Monas)
+GET {{baseUrl}}/pothole-clusters/nearby?lat=-6.1754&lon=106.8272&radiusMeters=5000
+Content-Type: application/json

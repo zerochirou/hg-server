@@ -1,0 +1,334 @@
+{
+  "detections": [
+    {
+      "deviceId": "DEVICE-JKT-NODE-01",
+      "latitude": -6.2088,
+      "longitude": 106.8456,
+      "confidence": 0.94,
+      "speedKmh": 38.5,
+      "zAccelPeak": 3.82,
+      "modelVersion": "v1.2",
+      "detectedAt": "2026-09-01T14:10:00.000Z"
+    },
+    {
+      "deviceId": "DEVICE-JKT-NODE-01",
+      "latitude": -6.2089,
+      "longitude": 106.8457,
+      "confidence": 0.91,
+      "speedKmh": 35.2,
+      "zAccelPeak": 3.45,
+      "modelVersion": "v1.2",
+      "detectedAt": "2026-09-01T14:10:15.000Z"
+    },
+    {
+      "deviceId": "DEVICE-JKT-NODE-02",
+      "latitude": -6.2087,
+      "longitude": 106.8455,
+      "confidence": 0.88,
+      "speedKmh": 41.0,
+      "zAccelPeak": 3.12,
+      "modelVersion": "v1.2",
+      "detectedAt": "2026-09-01T14:11:00.000Z"
+    },
+    {
+      "deviceId": "DEVICE-JKT-NODE-03",
+      "latitude": -6.2255,
+      "longitude": 106.8095,
+      "confidence": 0.96,
+      "speedKmh": 45.0,
+      "zAccelPeak": 4.25,
+      "modelVersion": "v1.2",
+      "detectedAt": "2026-09-01T14:12:00.000Z"
+    },
+    {
+      "deviceId": "DEVICE-JKT-NODE-04",
+      "latitude": -6.2256,
+      "longitude": 106.8096,
+      "confidence": 0.93,
+      "speedKmh": 42.1,
+      "zAccelPeak": 3.95,
+      "modelVersion": "v1.2",
+      "detectedAt": "2026-09-01T14:12:30.000Z"
+    },
+    {
+      "deviceId": "DEVICE-JKT-NODE-05",
+      "latitude": -6.2254,
+      "longitude": 106.8094,
+      "confidence": 0.89,
+      "speedKmh": 40.8,
+      "zAccelPeak": 3.65,
+      "modelVersion": "v1.2",
+      "detectedAt": "2026-09-01T14:13:00.000Z"
+    },
+    {
+      "deviceId": "DEVICE-JKT-NODE-02",
+      "latitude": -6.2412,
+      "longitude": 106.8321,
+      "confidence": 0.87,
+      "speedKmh": 28.5,
+      "zAccelPeak": 2.85,
+      "modelVersion": "v1.2",
+      "detectedAt": "2026-09-01T14:15:00.000Z"
+    },
+    {
+      "deviceId": "DEVICE-JKT-NODE-03",
+      "latitude": -6.2413,
+      "longitude": 106.8322,
+      "confidence": 0.84,
+      "speedKmh": 30.0,
+      "zAccelPeak": 2.70,
+      "modelVersion": "v1.2",
+      "detectedAt": "2026-09-01T14:15:20.000Z"
+    },
+    {
+      "deviceId": "DEVICE-JKT-NODE-01",
+      "latitude": -6.2934,
+      "longitude": 106.8123,
+      "confidence": 0.98,
+      "speedKmh": 52.0,
+      "zAccelPeak": 5.10,
+      "modelVersion": "v1.2",
+      "detectedAt": "2026-09-01T14:16:00.000Z"
+    },
+    {
+      "deviceId": "DEVICE-JKT-NODE-04",
+      "latitude": -6.2935,
+      "longitude": 106.8124,
+      "confidence": 0.95,
+      "speedKmh": 48.3,
+      "zAccelPeak": 4.80,
+      "modelVersion": "v1.2",
+      "detectedAt": "2026-09-01T14:16:45.000Z"
+    },
+    {
+      "deviceId": "DEVICE-JKT-NODE-05",
+      "latitude": -6.2933,
+      "longitude": 106.8122,
+      "confidence": 0.92,
+      "speedKmh": 50.1,
+      "zAccelPeak": 4.55,
+      "modelVersion": "v1.2",
+      "detectedAt": "2026-09-01T14:17:15.000Z"
+    },
+    {
+      "deviceId": "DEVICE-JKT-NODE-02",
+      "latitude": -6.2936,
+      "longitude": 106.8125,
+      "confidence": 0.96,
+      "speedKmh": 49.0,
+      "zAccelPeak": 4.95,
+      "modelVersion": "v1.2",
+      "detectedAt": "2026-09-01T14:17:50.000Z"
+    },
+    {
+      "deviceId": "DEVICE-JKT-NODE-03",
+      "latitude": -6.1855,
+      "longitude": 106.8234,
+      "confidence": 0.76,
+      "speedKmh": 22.0,
+      "zAccelPeak": 1.95,
+      "modelVersion": "v1.2",
+      "detectedAt": "2026-09-01T14:18:00.000Z"
+    },
+    {
+      "deviceId": "DEVICE-JKT-NODE-01",
+      "latitude": -6.1854,
+      "longitude": 106.8233,
+      "confidence": 0.79,
+      "speedKmh": 25.4,
+      "zAccelPeak": 2.10,
+      "modelVersion": "v1.2",
+      "detectedAt": "2026-09-01T14:18:30.000Z"
+    },
+    {
+      "deviceId": "DEVICE-JKT-NODE-04",
+      "latitude": -6.1685,
+      "longitude": 106.7892,
+      "confidence": 0.91,
+      "speedKmh": 36.0,
+      "zAccelPeak": 3.60,
+      "modelVersion": "v1.2",
+      "detectedAt": "2026-09-01T14:20:00.000Z"
+    },
+    {
+      "deviceId": "DEVICE-JKT-NODE-05",
+      "latitude": -6.1686,
+      "longitude": 106.7893,
+      "confidence": 0.89,
+      "speedKmh": 34.5,
+      "zAccelPeak": 3.35,
+      "modelVersion": "v1.2",
+      "detectedAt": "2026-09-01T14:20:40.000Z"
+    },
+    {
+      "deviceId": "DEVICE-JKT-NODE-02",
+      "latitude": -6.2420,
+      "longitude": 106.8715,
+      "confidence": 0.93,
+      "speedKmh": 44.0,
+      "zAccelPeak": 3.90,
+      "modelVersion": "v1.2",
+      "detectedAt": "2026-09-01T14:22:00.000Z"
+    },
+    {
+      "deviceId": "DEVICE-JKT-NODE-03",
+      "latitude": -6.2421,
+      "longitude": 106.8716,
+      "confidence": 0.90,
+      "speedKmh": 41.2,
+      "zAccelPeak": 3.55,
+      "modelVersion": "v1.2",
+      "detectedAt": "2026-09-01T14:22:30.000Z"
+    },
+    {
+      "deviceId": "DEVICE-JKT-NODE-01",
+      "latitude": -6.2419,
+      "longitude": 106.8714,
+      "confidence": 0.88,
+      "speedKmh": 46.5,
+      "zAccelPeak": 3.40,
+      "modelVersion": "v1.2",
+      "detectedAt": "2026-09-01T14:23:00.000Z"
+    },
+    {
+      "deviceId": "DEVICE-BKS-NODE-01",
+      "latitude": -6.2498,
+      "longitude": 106.9923,
+      "confidence": 0.95,
+      "speedKmh": 32.0,
+      "zAccelPeak": 4.15,
+      "modelVersion": "v1.2",
+      "detectedAt": "2026-09-01T14:24:00.000Z"
+    },
+    {
+      "deviceId": "DEVICE-BKS-NODE-02",
+      "latitude": -6.2499,
+      "longitude": 106.9924,
+      "confidence": 0.92,
+      "speedKmh": 30.5,
+      "zAccelPeak": 3.80,
+      "modelVersion": "v1.2",
+      "detectedAt": "2026-09-01T14:24:25.000Z"
+    },
+    {
+      "deviceId": "DEVICE-BKS-NODE-01",
+      "latitude": -6.2497,
+      "longitude": 106.9922,
+      "confidence": 0.90,
+      "speedKmh": 35.0,
+      "zAccelPeak": 3.65,
+      "modelVersion": "v1.2",
+      "detectedAt": "2026-09-01T14:24:50.000Z"
+    },
+    {
+      "deviceId": "DEVICE-DPK-NODE-01",
+      "latitude": -6.3685,
+      "longitude": 106.8335,
+      "confidence": 0.97,
+      "speedKmh": 29.0,
+      "zAccelPeak": 4.60,
+      "modelVersion": "v1.2",
+      "detectedAt": "2026-09-01T14:25:00.000Z"
+    },
+    {
+      "deviceId": "DEVICE-DPK-NODE-02",
+      "latitude": -6.3686,
+      "longitude": 106.8336,
+      "confidence": 0.94,
+      "speedKmh": 27.8,
+      "zAccelPeak": 4.30,
+      "modelVersion": "v1.2",
+      "detectedAt": "2026-09-01T14:25:30.000Z"
+    },
+    {
+      "deviceId": "DEVICE-DPK-NODE-03",
+      "latitude": -6.3684,
+      "longitude": 106.8334,
+      "confidence": 0.91,
+      "speedKmh": 31.2,
+      "zAccelPeak": 4.05,
+      "modelVersion": "v1.2",
+      "detectedAt": "2026-09-01T14:26:00.000Z"
+    },
+    {
+      "deviceId": "DEVICE-TNG-NODE-01",
+      "latitude": -6.2755,
+      "longitude": 106.6625,
+      "confidence": 0.85,
+      "speedKmh": 55.0,
+      "zAccelPeak": 2.95,
+      "modelVersion": "v1.2",
+      "detectedAt": "2026-09-01T14:27:00.000Z"
+    },
+    {
+      "deviceId": "DEVICE-TNG-NODE-02",
+      "latitude": -6.2756,
+      "longitude": 106.6626,
+      "confidence": 0.82,
+      "speedKmh": 52.4,
+      "zAccelPeak": 2.75,
+      "modelVersion": "v1.2",
+      "detectedAt": "2026-09-01T14:27:40.000Z"
+    },
+    {
+      "deviceId": "DEVICE-JKT-NODE-01",
+      "latitude": -6.1554,
+      "longitude": 106.8921,
+      "confidence": 0.93,
+      "speedKmh": 33.0,
+      "zAccelPeak": 3.75,
+      "modelVersion": "v1.2",
+      "detectedAt": "2026-09-01T14:28:00.000Z"
+    },
+    {
+      "deviceId": "DEVICE-JKT-NODE-02",
+      "latitude": -6.1555,
+      "longitude": 106.8922,
+      "confidence": 0.89,
+      "speedKmh": 30.5,
+      "zAccelPeak": 3.30,
+      "modelVersion": "v1.2",
+      "detectedAt": "2026-09-01T14:28:30.000Z"
+    },
+    {
+      "deviceId": "DEVICE-JKT-NODE-03",
+      "latitude": -6.1345,
+      "longitude": 106.8125,
+      "confidence": 0.81,
+      "speedKmh": 25.0,
+      "zAccelPeak": 2.45,
+      "modelVersion": "v1.2",
+      "detectedAt": "2026-09-01T14:29:00.000Z"
+    },
+    {
+      "deviceId": "DEVICE-JKT-NODE-04",
+      "latitude": -6.1346,
+      "longitude": 106.8126,
+      "confidence": 0.78,
+      "speedKmh": 23.5,
+      "zAccelPeak": 2.20,
+      "modelVersion": "v1.2",
+      "detectedAt": "2026-09-01T14:29:35.000Z"
+    },
+    {
+      "deviceId": "DEVICE-BGR-NODE-01",
+      "latitude": -6.5975,
+      "longitude": 106.7995,
+      "confidence": 0.95,
+      "speedKmh": 36.0,
+      "zAccelPeak": 4.10,
+      "modelVersion": "v1.2",
+      "detectedAt": "2026-09-01T14:30:00.000Z"
+    },
+    {
+      "deviceId": "DEVICE-BGR-NODE-02",
+      "latitude": -6.5976,
+      "longitude": 106.7996,
+      "confidence": 0.92,
+      "speedKmh": 34.2,
+      "zAccelPeak": 3.85,
+      "modelVersion": "v1.2",
+      "detectedAt": "2026-09-01T14:30:30.000Z"
+    }
+  ]
+}
