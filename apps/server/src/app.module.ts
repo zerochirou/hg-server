@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AuthModule } from '@thallesp/nestjs-better-auth';
+import { AppController } from './app.controller';
 import { auth } from './auth';
 import { DbModule } from './db/db.module';
 import { DetectionModule } from './detection/detection.module';
@@ -15,7 +16,7 @@ import { PotholeClustersModule } from './pothole-clusters/pothole-clusters.modul
     DetectionModule,
     PotholeClustersModule,
   ],
-  controllers: [],
+  controllers: [AppController],
   providers: [],
 })
 export class AppModule {}

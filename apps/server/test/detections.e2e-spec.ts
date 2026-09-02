@@ -3,11 +3,21 @@ import { Test, TestingModule } from '@nestjs/testing';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
-import { DbService } from '../src/db/db.service';
+
+interface DetectionResponse {
+  id: string;
+  deviceId: string;
+  latitude: number;
+  longitude: number;
+  confidence: number;
+  speedKmh?: number | null;
+  zAccelPeak?: number | null;
+  modelVersion: string;
+  detectedAt: string;
+}
 
 describe('Detections (e2e)', () => {
   let app: INestApplication<App>;
-  let db: DbService;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -17,8 +27,6 @@ describe('Detections (e2e)', () => {
     app = moduleFixture.createNestApplication();
     app.setGlobalPrefix('/api');
     await app.init();
-
-    db = moduleFixture.get<DbService>(DbService);
   });
 
   afterAll(async () => {
@@ -45,11 +53,12 @@ describe('Detections (e2e)', () => {
         .send(payload)
         .expect(201);
 
-      expect(response.body).toBeDefined();
-      expect(response.body.id).toBeDefined();
-      expect(response.body.deviceId).toBe(testDeviceId);
-      expect(response.body.latitude).toBe(-6.2088);
-      expect(response.body.longitude).toBe(106.8456);
+      const body = response.body as DetectionResponse;
+      expect(body).toBeDefined();
+      expect(body.id).toBeDefined();
+      expect(body.deviceId).toBe(testDeviceId);
+      expect(body.latitude).toBe(-6.2088);
+      expect(body.longitude).toBe(106.8456);
     });
   });
 
@@ -95,9 +104,10 @@ describe('Detections (e2e)', () => {
         .get(`/api/detections/device/${testDeviceId}`)
         .expect(200);
 
-      expect(Array.isArray(response.body)).toBe(true);
-      expect(response.body.length).toBeGreaterThanOrEqual(3);
-      expect(response.body[0].deviceId).toBe(testDeviceId);
+      const body = response.body as DetectionResponse[];
+      expect(Array.isArray(body)).toBe(true);
+      expect(body.length).toBeGreaterThanOrEqual(3);
+      expect(body[0]?.deviceId).toBe(testDeviceId);
     });
   });
 });

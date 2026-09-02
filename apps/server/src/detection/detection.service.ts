@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { DbService } from '../db/db.service';
 import { PotholeClustersService } from '../pothole-clusters/pothole-clusters.service';
 import { CreateBatchDetectionDto } from './dto/create-batch-detection.dto';
@@ -78,6 +78,48 @@ export class DetectionService {
   }
 
   /**
+   * Mengambil semua raw deteksi pothole
+   */
+  async findAll(query?: {
+    limit?: number;
+    search?: string;
+    deviceId?: string;
+  }) {
+    const { limit = 100, search, deviceId } = query || {};
+
+    return this.db.detection.findMany({
+      where: {
+        ...(deviceId ? { deviceId } : {}),
+        ...(search
+          ? {
+              OR: [
+                { deviceId: { contains: search, mode: 'insensitive' } },
+                { modelVersion: { contains: search, mode: 'insensitive' } },
+              ],
+            }
+          : {}),
+      },
+      orderBy: { detectedAt: 'desc' },
+      take: limit,
+    });
+  }
+
+  /**
+   * Detail satu data deteksi
+   */
+  async findById(id: string) {
+    const detection = await this.db.detection.findUnique({
+      where: { id },
+    });
+
+    if (!detection) {
+      throw new NotFoundException(`Detection dengan ID ${id} tidak ditemukan`);
+    }
+
+    return detection;
+  }
+
+  /**
    * Mengambil riwayat deteksi berdasarkan deviceId
    */
   async findByDeviceId(deviceId: string, limit = 50) {
@@ -85,6 +127,49 @@ export class DetectionService {
       where: { deviceId },
       orderBy: { detectedAt: 'desc' },
       take: limit,
+    });
+  }
+
+  /**
+   * Update data raw deteksi pothole
+   */
+  async update(
+    id: string,
+    dto: {
+      confidence?: number;
+      speedKmh?: number;
+      zAccelPeak?: number;
+      modelVersion?: string;
+      deviceId?: string;
+      latitude?: number;
+      longitude?: number;
+    },
+  ) {
+    await this.findById(id);
+
+    return this.db.detection.update({
+      where: { id },
+      data: {
+        ...(dto.confidence !== undefined ? { confidence: dto.confidence } : {}),
+        ...(dto.speedKmh !== undefined ? { speedKmh: dto.speedKmh } : {}),
+        ...(dto.zAccelPeak !== undefined ? { zAccelPeak: dto.zAccelPeak } : {}),
+        ...(dto.modelVersion !== undefined
+          ? { modelVersion: dto.modelVersion }
+          : {}),
+        ...(dto.deviceId !== undefined ? { deviceId: dto.deviceId } : {}),
+        ...(dto.latitude !== undefined ? { latitude: dto.latitude } : {}),
+        ...(dto.longitude !== undefined ? { longitude: dto.longitude } : {}),
+      },
+    });
+  }
+
+  /**
+   * Hapus data raw deteksi pothole
+   */
+  async delete(id: string) {
+    await this.findById(id);
+    return this.db.detection.delete({
+      where: { id },
     });
   }
 }

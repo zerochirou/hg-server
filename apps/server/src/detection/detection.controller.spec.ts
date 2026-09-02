@@ -1,6 +1,4 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { DbService } from '../db/db.service';
-import { PotholeClustersService } from '../pothole-clusters/pothole-clusters.service';
 import { DetectionController } from './detection.controller';
 import { DetectionService } from './detection.service';
 import { CreateBatchDetectionDto } from './dto/create-batch-detection.dto';
@@ -8,7 +6,6 @@ import { CreateDetectionDto } from './dto/create-detection.dto';
 
 describe('DetectionController', () => {
   let controller: DetectionController;
-  let service: DetectionService;
 
   const mockDetectionService = {
     create: jest.fn(),
@@ -28,7 +25,6 @@ describe('DetectionController', () => {
     }).compile();
 
     controller = module.get<DetectionController>(DetectionController);
-    service = module.get<DetectionService>(DetectionService);
     jest.clearAllMocks();
   });
 
@@ -50,7 +46,7 @@ describe('DetectionController', () => {
 
       const result = await controller.create(dto);
 
-      expect(service.create).toHaveBeenCalledWith(dto);
+      expect(mockDetectionService.create).toHaveBeenCalledWith(dto);
       expect(result).toEqual(expectedResult);
     });
   });
@@ -72,7 +68,7 @@ describe('DetectionController', () => {
 
       const result = await controller.createBatch(dto);
 
-      expect(service.createBatch).toHaveBeenCalledWith(dto);
+      expect(mockDetectionService.createBatch).toHaveBeenCalledWith(dto);
       expect(result).toEqual({ count: 1 });
     });
   });
@@ -84,7 +80,7 @@ describe('DetectionController', () => {
 
       const result = await controller.findByDeviceId('dev-1');
 
-      expect(service.findByDeviceId).toHaveBeenCalledWith('dev-1');
+      expect(mockDetectionService.findByDeviceId).toHaveBeenCalledWith('dev-1');
       expect(result).toEqual(expectedList);
     });
   });

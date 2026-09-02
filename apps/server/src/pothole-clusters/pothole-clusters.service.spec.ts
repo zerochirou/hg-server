@@ -5,7 +5,6 @@ import { PotholeClustersService } from './pothole-clusters.service';
 
 describe('PotholeClustersService', () => {
   let service: PotholeClustersService;
-  let db: DbService;
 
   const mockDb = {
     $queryRaw: jest.fn(),
@@ -24,7 +23,6 @@ describe('PotholeClustersService', () => {
     }).compile();
 
     service = module.get<PotholeClustersService>(PotholeClustersService);
-    db = module.get<DbService>(DbService);
     jest.clearAllMocks();
   });
 

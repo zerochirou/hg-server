@@ -7,8 +7,6 @@ import { CreateDetectionDto } from './dto/create-detection.dto';
 
 describe('DetectionService', () => {
   let service: DetectionService;
-  let db: DbService;
-  let clustersService: PotholeClustersService;
 
   const mockDb = {
     detection: {
@@ -38,8 +36,6 @@ describe('DetectionService', () => {
     }).compile();
 
     service = module.get<DetectionService>(DetectionService);
-    db = module.get<DbService>(DbService);
-    clustersService = module.get<PotholeClustersService>(PotholeClustersService);
     jest.clearAllMocks();
   });
 
@@ -60,9 +56,16 @@ describe('DetectionService', () => {
         detectedAt: '2026-09-01T12:00:00.000Z',
       };
 
-      const createdDetection = { id: 'uuid-1', ...dto, detectedAt: new Date(dto.detectedAt) };
+      const createdDetection = {
+        id: 'uuid-1',
+        ...dto,
+        detectedAt: new Date(dto.detectedAt),
+      };
       mockDb.detection.create.mockResolvedValue(createdDetection);
-      mockClustersService.aggregateDetection.mockResolvedValue({ action: 'created', clusterId: 'c-1' });
+      mockClustersService.aggregateDetection.mockResolvedValue({
+        action: 'created',
+        clusterId: 'c-1',
+      });
 
       const result = await service.create(dto);
 
@@ -113,7 +116,10 @@ describe('DetectionService', () => {
       };
 
       mockDb.detection.createMany.mockResolvedValue({ count: 2 });
-      mockClustersService.aggregateDetection.mockResolvedValue({ action: 'created', clusterId: 'c-1' });
+      mockClustersService.aggregateDetection.mockResolvedValue({
+        action: 'created',
+        clusterId: 'c-1',
+      });
 
       const result = await service.createBatch(dto);
 

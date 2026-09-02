@@ -4,6 +4,17 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 
+interface ClusterResponse {
+  id: string;
+  center_latitude: number;
+  center_longitude: number;
+  severity: string;
+  confidence_avg: number;
+  detection_count: number;
+  status: string;
+  distance_meters?: number;
+}
+
 describe('PotholeClusters (e2e)', () => {
   let app: INestApplication<App>;
 
@@ -27,15 +38,13 @@ describe('PotholeClusters (e2e)', () => {
 
   beforeAll(async () => {
     // Seed detection to trigger cluster creation
-    await request(app.getHttpServer())
-      .post('/api/detections')
-      .send({
-        deviceId: 'e2e-cluster-device',
-        latitude: testLat,
-        longitude: testLon,
-        confidence: 0.9,
-        detectedAt: new Date().toISOString(),
-      });
+    await request(app.getHttpServer()).post('/api/detections').send({
+      deviceId: 'e2e-cluster-device',
+      latitude: testLat,
+      longitude: testLon,
+      confidence: 0.9,
+      detectedAt: new Date().toISOString(),
+    });
   });
 
   describe('GET /api/pothole-clusters', () => {
@@ -46,12 +55,13 @@ describe('PotholeClusters (e2e)', () => {
         )
         .expect(200);
 
-      expect(Array.isArray(response.body)).toBe(true);
-      expect(response.body.length).toBeGreaterThanOrEqual(1);
+      const body = response.body as ClusterResponse[];
+      expect(Array.isArray(body)).toBe(true);
+      expect(body.length).toBeGreaterThanOrEqual(1);
 
-      createdClusterId = response.body[0].id;
-      expect(response.body[0].center_latitude).toBeDefined();
-      expect(response.body[0].center_longitude).toBeDefined();
+      createdClusterId = body[0].id;
+      expect(body[0].center_latitude).toBeDefined();
+      expect(body[0].center_longitude).toBeDefined();
     });
   });
 
@@ -63,9 +73,10 @@ describe('PotholeClusters (e2e)', () => {
         )
         .expect(200);
 
-      expect(response.body).toBeDefined();
-      expect(response.body.id).toBeDefined();
-      expect(response.body.distance_meters).toBeLessThanOrEqual(50);
+      const body = response.body as ClusterResponse;
+      expect(body).toBeDefined();
+      expect(body.id).toBeDefined();
+      expect(body.distance_meters).toBeLessThanOrEqual(50);
     });
   });
 
@@ -77,8 +88,9 @@ describe('PotholeClusters (e2e)', () => {
         .get(`/api/pothole-clusters/${createdClusterId}`)
         .expect(200);
 
-      expect(response.body).toBeDefined();
-      expect(response.body.id).toBe(createdClusterId);
+      const body = response.body as ClusterResponse;
+      expect(body).toBeDefined();
+      expect(body.id).toBe(createdClusterId);
     });
 
     it('should return 404 for non-existent cluster id', async () => {
@@ -100,8 +112,9 @@ describe('PotholeClusters (e2e)', () => {
         })
         .expect(200);
 
-      expect(response.body.status).toBe('verified');
-      expect(response.body.severity).toBe('high');
+      const body = response.body as ClusterResponse;
+      expect(body.status).toBe('verified');
+      expect(body.severity).toBe('high');
     });
   });
 });

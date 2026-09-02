@@ -4,7 +4,6 @@ import { PotholeClustersService } from './pothole-clusters.service';
 
 describe('PotholeClustersController', () => {
   let controller: PotholeClustersController;
-  let service: PotholeClustersService;
 
   const mockPotholeClustersService = {
     getByBoundingBox: jest.fn(),
@@ -24,8 +23,9 @@ describe('PotholeClustersController', () => {
       ],
     }).compile();
 
-    controller = module.get<PotholeClustersController>(PotholeClustersController);
-    service = module.get<PotholeClustersService>(PotholeClustersService);
+    controller = module.get<PotholeClustersController>(
+      PotholeClustersController,
+    );
     jest.clearAllMocks();
   });
 
@@ -35,7 +35,9 @@ describe('PotholeClustersController', () => {
 
   describe('getByBoundingBox', () => {
     it('should parse query params and call getByBoundingBox', async () => {
-      const mockResult = [{ id: 'uuid-1', center_latitude: -6.2, center_longitude: 106.8 }];
+      const mockResult = [
+        { id: 'uuid-1', center_latitude: -6.2, center_longitude: 106.8 },
+      ];
       mockPotholeClustersService.getByBoundingBox.mockResolvedValue(mockResult);
 
       const result = await controller.getByBoundingBox(
@@ -47,7 +49,7 @@ describe('PotholeClustersController', () => {
         '100',
       );
 
-      expect(service.getByBoundingBox).toHaveBeenCalledWith({
+      expect(mockPotholeClustersService.getByBoundingBox).toHaveBeenCalledWith({
         minLat: -6.22,
         minLon: 106.83,
         maxLat: -6.2,
@@ -66,7 +68,11 @@ describe('PotholeClustersController', () => {
 
       const result = await controller.findNearby('-6.2088', '106.8456', '25');
 
-      expect(service.findNearby).toHaveBeenCalledWith(-6.2088, 106.8456, 25);
+      expect(mockPotholeClustersService.findNearby).toHaveBeenCalledWith(
+        -6.2088,
+        106.8456,
+        25,
+      );
       expect(result).toEqual(mockResult);
     });
   });
@@ -78,7 +84,7 @@ describe('PotholeClustersController', () => {
 
       const result = await controller.getById('uuid-1');
 
-      expect(service.getById).toHaveBeenCalledWith('uuid-1');
+      expect(mockPotholeClustersService.getById).toHaveBeenCalledWith('uuid-1');
       expect(result).toEqual(mockResult);
     });
   });
@@ -91,7 +97,10 @@ describe('PotholeClustersController', () => {
 
       const result = await controller.updateStatus('uuid-1', dto);
 
-      expect(service.updateStatus).toHaveBeenCalledWith('uuid-1', dto);
+      expect(mockPotholeClustersService.updateStatus).toHaveBeenCalledWith(
+        'uuid-1',
+        dto,
+      );
       expect(result).toEqual(mockResult);
     });
   });

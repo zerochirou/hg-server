@@ -2,7 +2,7 @@ import { DynamicModule, Module } from '@nestjs/common';
 
 @Module({})
 export class AuthModule {
-  static forRoot(options?: any): DynamicModule {
+  static forRoot(): DynamicModule {
     return {
       module: AuthModule,
       providers: [],
@@ -12,8 +12,8 @@ export class AuthModule {
 }
 
 export const AllowGuest = () => () => {};
-export const Roles = (...roles: any[]) => () => {};
-export const Permissions = (...permissions: any[]) => () => {};
+export const Roles = () => () => {};
+export const Permissions = () => () => {};
 export const CurrentUser = () => () => {};
 export const Session = () => () => {};
 export const AuthSession = () => () => {};
