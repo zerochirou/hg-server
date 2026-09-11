@@ -31,17 +31,19 @@
     "db:validate": "prisma migrate validate"
   },
   "dependencies": {
-    "@better-auth/prisma-adapter": "^1.6.25",
+    "@better-auth/expo": "^1.7.2",
+    "@better-auth/prisma-adapter": "^1.7.2",
     "@nestjs/common": "^11.0.1",
     "@nestjs/core": "^11.0.1",
     "@nestjs/platform-express": "^11.0.1",
     "@prisma/adapter-pg": "^7.9.1",
     "@prisma/client": "^7.9.1",
     "@thallesp/nestjs-better-auth": "^2.7.0",
-    "better-auth": "^1.6.25",
+    "better-auth": "^1.7.2",
     "pg": "^8.22.0",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.1"
+    "rxjs": "^7.8.1",
+    "zod": "^4.5.4"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",

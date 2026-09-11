@@ -2,7 +2,6 @@
 
 import * as React from 'react';
 import { NavMain } from '@/components/nav-main';
-import { NavProjects } from '@/components/nav-projects';
 import { NavSecondary } from '@/components/nav-secondary';
 import { NavUser } from '@/components/nav-user';
 import {
@@ -15,16 +14,11 @@ import {
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import {
-  ActivityIcon,
-  AlertTriangleIcon,
-  CheckCircle2Icon,
   Database,
   DatabaseIcon,
   HelpCircleIcon,
   LayoutDashboardIcon,
-  Settings2Icon,
   ShieldCheckIcon,
-  Table2Icon,
 } from 'lucide-react';
 
 const data = {
@@ -73,23 +67,6 @@ const data = {
       icon: <HelpCircleIcon className="size-4" />,
     },
   ],
-  projects: [
-    {
-      name: 'Klaster Parah (Severe)',
-      url: '/dashboard?severity=severe',
-      icon: <ActivityIcon className="size-4 text-destructive" />,
-    },
-    {
-      name: 'Klaster Sedang (Medium)',
-      url: '/dashboard?severity=medium',
-      icon: <AlertTriangleIcon className="size-4 text-amber-500" />,
-    },
-    {
-      name: 'Klaster Ringan (Low)',
-      url: '/dashboard?severity=low',
-      icon: <CheckCircle2Icon className="size-4 text-emerald-500" />,
-    },
-  ],
 };
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
@@ -115,7 +92,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
       <SidebarContent>
         <NavMain items={data.navMain} />
-        {/*<NavProjects projects={data.projects} />*/}
         <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
 
