@@ -496,7 +496,7 @@ export default function DataManagementPage() {
                 <div>
                   <CardTitle className="text-lg font-bold">Data Mentah Telemetri & Sensor IoT</CardTitle>
                   <CardDescription className="text-xs">
-                    Log titik rekaman akselerometer $Z$-axis, kecepatan kendaraan, dan inferensi model AI.
+                    Log titik rekaman akselerometer sumbu Z, kecepatan kendaraan, dan inferensi model AI.
                   </CardDescription>
                 </div>
 

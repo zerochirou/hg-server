@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import {
@@ -19,20 +19,32 @@ import {
   FieldSeparator,
 } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { signIn } from '@/lib/auth-client';
+import { signIn, signUp, useSession } from '@/lib/auth-client';
 import { cn } from '@/lib/utils';
-import { Loader2 } from 'lucide-react';
+import { CheckCircle2, Loader2 } from 'lucide-react';
 
 export function LoginForm({
   className,
   ...props
 }: React.ComponentProps<'div'>) {
   const router = useRouter();
+  const { data: session, isPending: sessionLoading } = useSession();
+
+  const [isRegisterMode, setIsRegisterMode] = useState(false);
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [socialLoading, setSocialLoading] = useState<'google' | 'github' | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  // Jika sudah memiliki sesi aktif, langsung arahkan ke Dashboard
+  useEffect(() => {
+    if (session?.user && !sessionLoading) {
+      router.replace('/dashboard');
+    }
+  }, [session, sessionLoading, router]);
 
   const getCallbackUrl = () => {
     if (typeof window !== 'undefined') {
@@ -45,23 +57,50 @@ export function LoginForm({
     e.preventDefault();
     setLoading(true);
     setError(null);
+    setSuccessMsg(null);
 
     try {
-      const res = await signIn.email({
-        email,
-        password,
-        callbackURL: getCallbackUrl(),
-      });
+      if (isRegisterMode) {
+        if (!name.trim()) {
+          setError('Nama lengkap wajib diisi untuk pendaftaran.');
+          setLoading(false);
+          return;
+        }
 
-      if (res?.error) {
-        setError(res.error.message || 'Email atau kata sandi tidak valid.');
-        return;
+        const res = await signUp.email({
+          email: email.trim(),
+          password,
+          name: name.trim(),
+          callbackURL: getCallbackUrl(),
+        });
+
+        if (res?.error) {
+          setError(res.error.message || 'Gagal mendaftar akun petugas.');
+          return;
+        }
+
+        setSuccessMsg('Pendaftaran berhasil! Mengalihkan ke dashboard...');
+        setTimeout(() => {
+          router.push('/dashboard');
+          router.refresh();
+        }, 800);
+      } else {
+        const res = await signIn.email({
+          email: email.trim(),
+          password,
+          callbackURL: getCallbackUrl(),
+        });
+
+        if (res?.error) {
+          setError(res.error.message || 'Email atau kata sandi tidak valid.');
+          return;
+        }
+
+        router.push('/dashboard');
+        router.refresh();
       }
-
-      router.push('/dashboard');
-      router.refresh();
     } catch {
-      setError('Terjadi kesalahan saat masuk. Silakan coba lagi.');
+      setError('Terjadi kesalahan saat memproses permintaan. Silakan coba lagi.');
     } finally {
       setLoading(false);
     }
@@ -70,29 +109,48 @@ export function LoginForm({
   const handleSocialLogin = async (provider: 'google' | 'github') => {
     setSocialLoading(provider);
     setError(null);
+    setSuccessMsg(null);
     try {
       await signIn.social({
         provider,
         callbackURL: getCallbackUrl(),
       });
     } catch {
-      setError(`Gagal menghubungkan dengan ${provider}. Pastikan Client ID telah dikonfigurasi.`);
+      setError(`Gagal menghubungkan dengan ${provider}. Pastikan konfigurasi OAuth valid.`);
       setSocialLoading(null);
     }
   };
+
+  if (sessionLoading) {
+    return (
+      <div className="flex h-48 w-full items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className={cn('flex flex-col gap-6', className)} {...props}>
       <Card>
         <CardHeader className="text-center">
-          <CardTitle className="text-xl font-bold">Masuk ke Akun Anda</CardTitle>
+          <CardTitle className="text-xl font-bold">
+            {isRegisterMode ? 'Daftar Akun Petugas' : 'Masuk ke Akun Anda'}
+          </CardTitle>
           <CardDescription>
-            Pilih metode login sosial atau masukkan email untuk melanjutkan
+            {isRegisterMode
+              ? 'Lengkapi data diri Anda untuk mendaftar sebagai petugas sistem HyperGrid'
+              : 'Pilih metode login sosial atau masukkan email untuk melanjutkan'}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col gap-4">
             {error && <FieldError errors={[{ message: error }]} />}
+            {successMsg && (
+              <div className="flex items-center gap-2 p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 text-xs font-medium">
+                <CheckCircle2 className="h-4 w-4 shrink-0" />
+                <span>{successMsg}</span>
+              </div>
+            )}
 
             {/* Social Auth Providers Grid */}
             <div className="grid grid-cols-2 gap-3">
@@ -154,6 +212,20 @@ export function LoginForm({
 
             <form onSubmit={handleSubmit}>
               <FieldGroup>
+                {isRegisterMode && (
+                  <Field>
+                    <FieldLabel htmlFor="name">Nama Lengkap</FieldLabel>
+                    <Input
+                      id="name"
+                      type="text"
+                      placeholder="Nama Petugas"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      required={isRegisterMode}
+                    />
+                  </Field>
+                )}
+
                 <Field>
                   <FieldLabel htmlFor="email">Email</FieldLabel>
                   <Input
@@ -169,12 +241,14 @@ export function LoginForm({
                 <Field>
                   <div className="flex items-center">
                     <FieldLabel htmlFor="password">Kata Sandi</FieldLabel>
-                    <a
-                      href="#"
-                      className="ml-auto inline-block text-xs underline-offset-4 hover:underline text-muted-foreground"
-                    >
-                      Lupa kata sandi?
-                    </a>
+                    {!isRegisterMode && (
+                      <a
+                        href="#"
+                        className="ml-auto inline-block text-xs underline-offset-4 hover:underline text-muted-foreground"
+                      >
+                        Lupa kata sandi?
+                      </a>
+                    )}
                   </div>
                   <Input
                     id="password"
@@ -187,15 +261,44 @@ export function LoginForm({
                 </Field>
 
                 <Field>
-                  <Button type="submit" className="w-full font-medium" disabled={loading || Boolean(socialLoading)}>
+                  <Button
+                    type="submit"
+                    className="w-full font-medium"
+                    disabled={loading || Boolean(socialLoading)}
+                  >
                     {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Masuk
+                    {isRegisterMode ? 'Daftar Sekarang' : 'Masuk'}
                   </Button>
                   <FieldDescription className="text-center text-xs">
-                    Belum memiliki akun?{' '}
-                    <a href="#" className="font-medium text-primary hover:underline">
-                      Daftar Petugas
-                    </a>
+                    {isRegisterMode ? (
+                      <>
+                        Sudah memiliki akun?{' '}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsRegisterMode(false);
+                            setError(null);
+                          }}
+                          className="font-medium text-primary hover:underline cursor-pointer"
+                        >
+                          Masuk di sini
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        Belum memiliki akun?{' '}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsRegisterMode(true);
+                            setError(null);
+                          }}
+                          className="font-medium text-primary hover:underline cursor-pointer"
+                        >
+                          Daftar Petugas
+                        </button>
+                      </>
+                    )}
                   </FieldDescription>
                 </Field>
               </FieldGroup>

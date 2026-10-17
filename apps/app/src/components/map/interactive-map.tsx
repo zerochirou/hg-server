@@ -271,40 +271,60 @@ export function InteractiveMap({
             </div>
 
             {/* Quick Actions */}
-            <div className="pt-2 border-t flex items-center gap-2">
-              <Button
-                size="sm"
-                variant="default"
-                className="w-full text-xs gap-1"
-                disabled={selectedCluster.status === 'verified' || updateStatusMutation.isPending}
-                onClick={async () => {
-                  await updateStatusMutation.mutateAsync({
-                    id: selectedCluster.id,
-                    status: 'verified',
-                  });
-                  setSelectedCluster({ ...selectedCluster, status: 'verified' });
-                }}
-              >
-                <ShieldCheck className="size-3.5" />
-                {selectedCluster.status === 'verified' ? 'Terverifikasi' : 'Verifikasi PU'}
-              </Button>
+            <div className="pt-2 border-t flex flex-col gap-2">
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="default"
+                  className="w-full text-xs gap-1"
+                  disabled={selectedCluster.status === 'verified' || updateStatusMutation.isPending}
+                  onClick={async () => {
+                    await updateStatusMutation.mutateAsync({
+                      id: selectedCluster.id,
+                      status: 'verified',
+                    });
+                    setSelectedCluster({ ...selectedCluster, status: 'verified' });
+                  }}
+                >
+                  <ShieldCheck className="size-3.5" />
+                  {selectedCluster.status === 'verified' ? 'Terverifikasi' : 'Verifikasi PU'}
+                </Button>
 
-              <Button
-                size="sm"
-                variant="outline"
-                className="w-full text-xs gap-1"
-                disabled={selectedCluster.status === 'repaired' || updateStatusMutation.isPending}
-                onClick={async () => {
-                  await updateStatusMutation.mutateAsync({
-                    id: selectedCluster.id,
-                    status: 'repaired',
-                  });
-                  setSelectedCluster({ ...selectedCluster, status: 'repaired' });
-                }}
-              >
-                <Wrench className="size-3.5" />
-                {selectedCluster.status === 'repaired' ? 'Selesai' : 'Tandai Selesai'}
-              </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="w-full text-xs gap-1"
+                  disabled={selectedCluster.status === 'repaired' || updateStatusMutation.isPending}
+                  onClick={async () => {
+                    await updateStatusMutation.mutateAsync({
+                      id: selectedCluster.id,
+                      status: 'repaired',
+                    });
+                    setSelectedCluster({ ...selectedCluster, status: 'repaired' });
+                  }}
+                >
+                  <Wrench className="size-3.5" />
+                  {selectedCluster.status === 'repaired' ? 'Selesai' : 'Tandai Selesai'}
+                </Button>
+              </div>
+
+              {selectedCluster.status === 'repaired' && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="w-full text-xs text-muted-foreground hover:text-foreground h-7"
+                  disabled={updateStatusMutation.isPending}
+                  onClick={async () => {
+                    await updateStatusMutation.mutateAsync({
+                      id: selectedCluster.id,
+                      status: 'active',
+                    });
+                    setSelectedCluster({ ...selectedCluster, status: 'active' });
+                  }}
+                >
+                  Buka Kembali (Perlu Perbaikan Ulang)
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>

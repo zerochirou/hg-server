@@ -1,7 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { BoundingBox, PotholeCluster, PotholeSeverity, PotholeStatus } from '@/types/pothole';
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+import { getApiBaseUrl } from '@/lib/auth-client';
+import type {
+  BoundingBox,
+  PotholeCluster,
+  PotholeSeverity,
+  PotholeStatus,
+} from '@/types/pothole';
 
 interface ClusterFilter {
   bbox?: BoundingBox | null;
@@ -10,6 +14,8 @@ interface ClusterFilter {
 }
 
 export function usePotholeClusters({ bbox, status, severity }: ClusterFilter) {
+  const baseUrl = getApiBaseUrl();
+
   return useQuery({
     queryKey: ['pothole-clusters', bbox, status, severity],
     queryFn: async (): Promise<PotholeCluster[]> => {
@@ -24,7 +30,7 @@ export function usePotholeClusters({ bbox, status, severity }: ClusterFilter) {
       if (status) params.append('status', status);
       if (severity) params.append('severity', severity);
 
-      const res = await fetch(`${API_BASE_URL}/api/pothole-clusters?${params.toString()}`, {
+      const res = await fetch(`${baseUrl}/api/pothole-clusters?${params.toString()}`, {
         credentials: 'include',
       });
 
@@ -40,38 +46,47 @@ export function usePotholeClusters({ bbox, status, severity }: ClusterFilter) {
 
 export function useUpdateClusterStatus() {
   const queryClient = useQueryClient();
+  const baseUrl = getApiBaseUrl();
 
   return useMutation({
     mutationFn: async ({
       id,
       status,
+      severity,
     }: {
       id: string;
       status: PotholeStatus;
+      severity?: PotholeSeverity;
     }): Promise<PotholeCluster> => {
-      const res = await fetch(`${API_BASE_URL}/api/pothole-clusters/${id}/status`, {
+      const res = await fetch(`${baseUrl}/api/pothole-clusters/${id}/status`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
         },
         credentials: 'include',
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({
+          status,
+          ...(severity ? { severity } : {}),
+        }),
       });
 
       if (!res.ok) {
-        throw new Error('Gagal memperbarui status klaster');
+        const errData = await res.json().catch(() => null);
+        throw new Error(errData?.message || 'Gagal memperbarui status klaster');
       }
 
       return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pothole-clusters'] });
+      queryClient.invalidateQueries({ queryKey: ['raw-detections'] });
     },
   });
 }
 
 export function useUpdateCluster() {
   const queryClient = useQueryClient();
+  const baseUrl = getApiBaseUrl();
 
   return useMutation({
     mutationFn: async ({
@@ -81,7 +96,7 @@ export function useUpdateCluster() {
       id: string;
       data: Partial<PotholeCluster>;
     }): Promise<PotholeCluster> => {
-      const res = await fetch(`${API_BASE_URL}/api/pothole-clusters/${id}`, {
+      const res = await fetch(`${baseUrl}/api/pothole-clusters/${id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -91,7 +106,8 @@ export function useUpdateCluster() {
       });
 
       if (!res.ok) {
-        throw new Error('Gagal memperbarui data klaster');
+        const errData = await res.json().catch(() => null);
+        throw new Error(errData?.message || 'Gagal memperbarui data klaster');
       }
 
       return res.json();
@@ -104,16 +120,18 @@ export function useUpdateCluster() {
 
 export function useDeleteCluster() {
   const queryClient = useQueryClient();
+  const baseUrl = getApiBaseUrl();
 
   return useMutation({
     mutationFn: async (id: string): Promise<{ success: boolean; id: string }> => {
-      const res = await fetch(`${API_BASE_URL}/api/pothole-clusters/${id}`, {
+      const res = await fetch(`${baseUrl}/api/pothole-clusters/${id}`, {
         method: 'DELETE',
         credentials: 'include',
       });
 
       if (!res.ok) {
-        throw new Error('Gagal menghapus klaster');
+        const errData = await res.json().catch(() => null);
+        throw new Error(errData?.message || 'Gagal menghapus klaster');
       }
 
       return res.json();

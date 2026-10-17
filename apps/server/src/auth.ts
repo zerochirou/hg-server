@@ -48,25 +48,30 @@ export const auth = betterAuth({
     'http://127.0.0.1:3000',
     'http://localhost:8081',
     'http://127.0.0.1:8081',
-    'exp://',
-    'heroui-native-app://',
-    'heroui-native-app://*',
 
-    // Scheme development Expo (Expo Go / Dev Client)
+    // Native Custom Schemes for HyperGrid Mobile App (Production, Staging, Dev Client)
+    'hypergrid://',
+    'hypergrid://*',
+    'hypergrid://**',
+
+    // Expo Go / Dev Client Schemes (All environments & local network IPs)
     'exp://',
+    'exp://*',
     'exp://**',
     'exp://*.*.*.*:*/**',
     'exp://10.0.2.2:*/**',
     'exp://localhost:*/**',
-    'hypergrid://',
-    ...(process.env.NODE_ENV === 'development'
-      ? [
-          'exp://', // Trust any host of the exp:// scheme
-          'exp://**', // Trust all Expo URLs (wildcard matching)
-          'exp://10.85.76.210:8081', // Trust 192.168.x.x IP range with any port and path
-          'hypergrid://10.85.76.210:8081', // Trust 192.168.x.x IP range with any port and path
-        ]
+    ...(process.env.ADDITIONAL_TRUSTED_ORIGINS
+      ? process.env.ADDITIONAL_TRUSTED_ORIGINS.split(',').map((o) => o.trim())
       : []),
   ],
+  advanced: {
+    useSecureCookies: process.env.NODE_ENV === 'production',
+    defaultCookieAttributes: {
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      httpOnly: true,
+    },
+  },
   plugins: [bearer(), expo()],
 });

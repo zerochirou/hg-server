@@ -301,22 +301,38 @@ export default function DashboardPage() {
                         {cluster.status}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right space-x-2">
+                    <TableCell className="text-right space-x-1.5">
                       {cluster.status === 'active' && (
-                        <Button
-                          size="xs"
-                          variant="outline"
-                          onClick={() =>
-                            updateStatusMutation.mutate({
-                              id: cluster.id,
-                              status: 'verified',
-                            })
-                          }
-                          disabled={updateStatusMutation.isPending}
-                        >
-                          <ShieldCheckIcon className="mr-1 h-3.5 w-3.5" />
-                          Verify PU
-                        </Button>
+                        <>
+                          <Button
+                            size="xs"
+                            variant="outline"
+                            onClick={() =>
+                              updateStatusMutation.mutate({
+                                id: cluster.id,
+                                status: 'verified',
+                              })
+                            }
+                            disabled={updateStatusMutation.isPending}
+                          >
+                            <ShieldCheckIcon className="mr-1 h-3.5 w-3.5" />
+                            Verify PU
+                          </Button>
+                          <Button
+                            size="xs"
+                            variant="ghost"
+                            className="text-xs text-muted-foreground hover:text-foreground"
+                            onClick={() =>
+                              updateStatusMutation.mutate({
+                                id: cluster.id,
+                                status: 'false_positive',
+                              })
+                            }
+                            disabled={updateStatusMutation.isPending}
+                          >
+                            Bukan Lubang
+                          </Button>
+                        </>
                       )}
                       {cluster.status === 'verified' && (
                         <Button
@@ -332,6 +348,38 @@ export default function DashboardPage() {
                         >
                           <WrenchIcon className="mr-1 h-3.5 w-3.5" />
                           Mark Repaired
+                        </Button>
+                      )}
+                      {cluster.status === 'repaired' && (
+                        <Button
+                          size="xs"
+                          variant="ghost"
+                          className="text-xs text-muted-foreground hover:text-foreground"
+                          onClick={() =>
+                            updateStatusMutation.mutate({
+                              id: cluster.id,
+                              status: 'active',
+                            })
+                          }
+                          disabled={updateStatusMutation.isPending}
+                        >
+                          Buka Kembali
+                        </Button>
+                      )}
+                      {cluster.status === 'false_positive' && (
+                        <Button
+                          size="xs"
+                          variant="ghost"
+                          className="text-xs text-muted-foreground hover:text-foreground"
+                          onClick={() =>
+                            updateStatusMutation.mutate({
+                              id: cluster.id,
+                              status: 'active',
+                            })
+                          }
+                          disabled={updateStatusMutation.isPending}
+                        >
+                          Cek Ulang
                         </Button>
                       )}
                     </TableCell>

@@ -989,6 +989,20 @@ export function FullscreenGisMap() {
                   <Wrench className="size-3.5" /> Selesai
                 </Button>
               </div>
+              {selectedCluster.status === 'repaired' && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 text-xs text-muted-foreground hover:text-foreground"
+                  disabled={updateStatusMutation.isPending}
+                  onClick={async () => {
+                    await updateStatusMutation.mutateAsync({ id: selectedCluster.id, status: 'active' });
+                    setSelectedCluster({ ...selectedCluster, status: 'active' });
+                  }}
+                >
+                  Buka Kembali (Perlu Perbaikan)
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>

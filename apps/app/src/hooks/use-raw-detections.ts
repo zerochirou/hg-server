@@ -1,7 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { getApiBaseUrl } from '@/lib/auth-client';
 import type { RawDetection } from '@/types/pothole';
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
 interface RawDetectionsFilter {
   limit?: number;
@@ -10,6 +9,8 @@ interface RawDetectionsFilter {
 }
 
 export function useRawDetections(filter?: RawDetectionsFilter) {
+  const baseUrl = getApiBaseUrl();
+
   return useQuery({
     queryKey: ['raw-detections', filter],
     queryFn: async (): Promise<RawDetection[]> => {
@@ -18,7 +19,7 @@ export function useRawDetections(filter?: RawDetectionsFilter) {
       if (filter?.search) params.append('search', filter.search);
       if (filter?.deviceId) params.append('deviceId', filter.deviceId);
 
-      const res = await fetch(`${API_BASE_URL}/api/detections?${params.toString()}`, {
+      const res = await fetch(`${baseUrl}/api/detections?${params.toString()}`, {
         credentials: 'include',
       });
 
@@ -34,6 +35,7 @@ export function useRawDetections(filter?: RawDetectionsFilter) {
 
 export function useUpdateDetection() {
   const queryClient = useQueryClient();
+  const baseUrl = getApiBaseUrl();
 
   return useMutation({
     mutationFn: async ({
@@ -43,7 +45,7 @@ export function useUpdateDetection() {
       id: string;
       data: Partial<RawDetection>;
     }): Promise<RawDetection> => {
-      const res = await fetch(`${API_BASE_URL}/api/detections/${id}`, {
+      const res = await fetch(`${baseUrl}/api/detections/${id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -53,7 +55,8 @@ export function useUpdateDetection() {
       });
 
       if (!res.ok) {
-        throw new Error('Gagal memperbarui data deteksi');
+        const errData = await res.json().catch(() => null);
+        throw new Error(errData?.message || 'Gagal memperbarui data deteksi');
       }
 
       return res.json();
@@ -67,16 +70,18 @@ export function useUpdateDetection() {
 
 export function useDeleteDetection() {
   const queryClient = useQueryClient();
+  const baseUrl = getApiBaseUrl();
 
   return useMutation({
     mutationFn: async (id: string): Promise<RawDetection> => {
-      const res = await fetch(`${API_BASE_URL}/api/detections/${id}`, {
+      const res = await fetch(`${baseUrl}/api/detections/${id}`, {
         method: 'DELETE',
         credentials: 'include',
       });
 
       if (!res.ok) {
-        throw new Error('Gagal menghapus data deteksi');
+        const errData = await res.json().catch(() => null);
+        throw new Error(errData?.message || 'Gagal menghapus data deteksi');
       }
 
       return res.json();
