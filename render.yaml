@@ -1,0 +1,100 @@
+# render.yaml — Infrastructure as Code untuk HyperGrid Monorepo
+# Deploy ke Render: https://dashboard.render.com/select-repo
+# Dokumentasi: https://render.com/docs/blueprint-spec
+
+services:
+  # ─────────────────────────────────────────────────────────
+  # SERVICE 1: NestJS Backend API (Port 4000)
+  # ─────────────────────────────────────────────────────────
+  - type: web
+    name: hg-server
+    runtime: node
+    plan: free          # Ganti ke "starter" atau "standard" jika perlu always-on
+    region: singapore   # Pilih region terdekat
+
+    # Render akan checkout dari root monorepo
+    rootDir: .
+
+    # Build command: install dependencies dari root (pnpm workspace)
+    # lalu build hanya package "server"
+    buildCommand: |
+      npm install -g pnpm
+      pnpm install --frozen-lockfile
+      pnpm --filter server run build
+
+    # Start command: jalankan migration prisma lalu server
+    startCommand: pnpm --filter server run start:prod
+
+    # Health check endpoint
+    healthCheckPath: /api/health
+
+    # Environment variables untuk backend
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 4000
+
+      # === DATABASE ===
+      # Ganti value ini dengan connection string PostgreSQL production Anda
+      # Bisa dari Render PostgreSQL, Supabase, Neon, dll.
+      - key: DATABASE_URL
+        sync: false   # Nilai diisi manual di Render Dashboard (tidak di-commit ke git)
+
+      # === BETTER AUTH ===
+      - key: BASE_URL
+        value: https://hg-server.onrender.com   # Ganti jika nama service berbeda
+      - key: BETTER_AUTH_URL
+        value: https://hg-server.onrender.com
+      - key: CLIENT_URL
+        value: https://hg-app.onrender.com      # Ganti sesuai nama service frontend
+      - key: BETTER_AUTH_SECRET
+        sync: false   # Isi manual di dashboard — JANGAN hardcode secret di sini!
+
+      # === GOOGLE OAUTH ===
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+
+      # === GITHUB OAUTH (opsional) ===
+      - key: GITHUB_CLIENT_ID
+        sync: false
+      - key: GITHUB_CLIENT_SECRET
+        sync: false
+
+      # === ADDITIONAL ORIGINS (opsional, untuk native app) ===
+      # Contoh: exp://192.168.x.x:8081 (pisahkan dengan koma)
+      - key: ADDITIONAL_TRUSTED_ORIGINS
+        value: ""
+      - key: ADDITIONAL_ALLOWED_ORIGINS
+        value: ""
+
+  # ─────────────────────────────────────────────────────────
+  # SERVICE 2: Next.js Frontend Dashboard (Port 3000)
+  # ─────────────────────────────────────────────────────────
+  - type: web
+    name: hg-app
+    runtime: node
+    plan: free
+    region: singapore
+
+    rootDir: .
+
+    buildCommand: |
+      npm install -g pnpm
+      pnpm install --frozen-lockfile
+      pnpm --filter app run build
+
+    startCommand: pnpm --filter app run start
+
+    # Environment variables untuk frontend
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+
+      # URL backend API (public — dipakai oleh browser)
+      - key: NEXT_PUBLIC_API_URL
+        value: https://hg-server.onrender.com
