@@ -14,14 +14,15 @@ export class DetectionService {
   /**
    * Menyimpan satu data deteksi dari client dan otomatis meng-clusterkan ke PostGIS
    */
-  async create(dto: CreateDetectionDto) {
+  async create(dto: CreateDetectionDto, sessionUserId?: string) {
     const detectedAtDate = new Date(dto.detectedAt);
+    const userId = dto.userId || sessionUserId || null;
 
     // 1. Simpan raw data deteksi
     const detection = await this.db.detection.create({
       data: {
         deviceId: dto.deviceId,
-        userId: dto.userId ?? null,
+        userId: userId,
         latitude: dto.latitude,
         longitude: dto.longitude,
         confidence: dto.confidence,
@@ -46,10 +47,10 @@ export class DetectionService {
   /**
    * Menyimpan data deteksi secara batch (massal) dari client dan meng-clusterkan
    */
-  async createBatch(dto: CreateBatchDetectionDto) {
+  async createBatch(dto: CreateBatchDetectionDto, sessionUserId?: string) {
     const data = dto.detections.map((item) => ({
       deviceId: item.deviceId,
-      userId: item.userId ?? null,
+      userId: item.userId || sessionUserId || null,
       latitude: item.latitude,
       longitude: item.longitude,
       confidence: item.confidence,
@@ -84,12 +85,14 @@ export class DetectionService {
     limit?: number;
     search?: string;
     deviceId?: string;
+    userId?: string;
   }) {
-    const { limit = 100, search, deviceId } = query || {};
+    const { limit = 100, search, deviceId, userId } = query || {};
 
     return this.db.detection.findMany({
       where: {
         ...(deviceId ? { deviceId } : {}),
+        ...(userId ? { userId } : {}),
         ...(search
           ? {
               OR: [
@@ -99,6 +102,17 @@ export class DetectionService {
             }
           : {}),
       },
+      orderBy: { detectedAt: 'desc' },
+      take: limit,
+    });
+  }
+
+  /**
+   * Mengambil riwayat deteksi khusus satu akun user
+   */
+  async findByUserId(userId: string, limit = 100) {
+    return this.db.detection.findMany({
+      where: { userId },
       orderBy: { detectedAt: 'desc' },
       take: limit,
     });
