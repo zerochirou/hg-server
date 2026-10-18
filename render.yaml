@@ -19,7 +19,7 @@ services:
     # lalu build hanya package "server"
     buildCommand: |
       npm install -g pnpm
-      pnpm install --frozen-lockfile
+      pnpm install --frozen-lockfile --prod=false
       pnpm --filter server run build
 
     # Start command: jalankan migration prisma lalu server
@@ -83,7 +83,7 @@ services:
 
     buildCommand: |
       npm install -g pnpm
-      pnpm install --frozen-lockfile
+      pnpm install --frozen-lockfile --prod=false
       pnpm --filter app run build
 
     startCommand: pnpm --filter app run start
