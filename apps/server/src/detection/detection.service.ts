@@ -27,7 +27,7 @@ export class DetectionService {
         confidence: dto.confidence,
         speedKmh: dto.speedKmh ?? null,
         zAccelPeak: dto.zAccelPeak ?? null,
-        modelVersion: dto.modelVersion ?? 'v1',
+        modelVersion: (dto.modelVersion ?? 'v1').slice(0, 100),
         detectedAt: detectedAtDate,
       },
     });
@@ -55,7 +55,7 @@ export class DetectionService {
       confidence: item.confidence,
       speedKmh: item.speedKmh ?? null,
       zAccelPeak: item.zAccelPeak ?? null,
-      modelVersion: item.modelVersion ?? 'v1',
+      modelVersion: (item.modelVersion ?? 'v1').slice(0, 100),
       detectedAt: new Date(item.detectedAt),
     }));
 
@@ -154,7 +154,7 @@ export class DetectionService {
         ...(dto.speedKmh !== undefined ? { speedKmh: dto.speedKmh } : {}),
         ...(dto.zAccelPeak !== undefined ? { zAccelPeak: dto.zAccelPeak } : {}),
         ...(dto.modelVersion !== undefined
-          ? { modelVersion: dto.modelVersion }
+          ? { modelVersion: dto.modelVersion.slice(0, 100) }
           : {}),
         ...(dto.deviceId !== undefined ? { deviceId: dto.deviceId } : {}),
         ...(dto.latitude !== undefined ? { latitude: dto.latitude } : {}),

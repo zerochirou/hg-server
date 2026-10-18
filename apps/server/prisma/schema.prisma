@@ -96,7 +96,7 @@ model Detection {
   confidence   Float    @map("confidence")
   speedKmh     Float?   @map("speed_kmh")
   zAccelPeak   Float?   @map("z_accel_peak")
-  modelVersion String   @default("v1") @map("model_version") @db.VarChar(20)
+  modelVersion String   @default("v1") @map("model_version") @db.VarChar(100)
   detectedAt   DateTime @map("detected_at") @db.Timestamptz
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
 
