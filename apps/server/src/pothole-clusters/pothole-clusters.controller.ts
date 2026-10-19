@@ -7,9 +7,11 @@ import {
   Patch,
   Query,
 } from '@nestjs/common';
+import { OptionalAuth } from '@thallesp/nestjs-better-auth';
 import { PotholeClustersService } from './pothole-clusters.service';
 import { UpdateClusterStatusDto } from './dto/update-cluster-status.dto';
 
+@OptionalAuth()
 @Controller('pothole-clusters')
 export class PotholeClustersController {
   constructor(private readonly clustersService: PotholeClustersService) {}

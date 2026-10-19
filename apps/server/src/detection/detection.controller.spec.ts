@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import type { UserSession } from '@thallesp/nestjs-better-auth';
 import { DetectionController } from './detection.controller';
 import { DetectionService } from './detection.service';
 import { CreateBatchDetectionDto } from './dto/create-batch-detection.dto';
@@ -11,6 +12,7 @@ describe('DetectionController', () => {
     create: jest.fn(),
     createBatch: jest.fn(),
     findByDeviceId: jest.fn(),
+    findAll: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -82,6 +84,139 @@ describe('DetectionController', () => {
 
       expect(mockDetectionService.findByDeviceId).toHaveBeenCalledWith('dev-1');
       expect(result).toEqual(expectedList);
+    });
+  });
+
+  describe('Role & User Data Isolation', () => {
+    it('should assign authenticated user ID to detection when creating', async () => {
+      const dto: CreateDetectionDto = {
+        deviceId: 'dev-1',
+        latitude: -6.2,
+        longitude: 106.8,
+        confidence: 0.9,
+        detectedAt: '2026-09-01T12:00:00.000Z',
+      };
+      const mockSession = {
+        session: {
+          id: 's1',
+          userId: 'user-123',
+          token: 'tok',
+          expiresAt: new Date(),
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        user: {
+          id: 'user-123',
+          email: 'u@test.com',
+          emailVerified: true,
+          name: 'User',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          role: 'user',
+        },
+      } as unknown as UserSession;
+      mockDetectionService.create.mockImplementation((d: CreateDetectionDto) =>
+        Promise.resolve({ id: 'uuid-1', ...d }),
+      );
+
+      const result = await controller.create(dto, mockSession);
+      expect(dto.userId).toBe('user-123');
+      expect(result.userId).toBe('user-123');
+    });
+
+    it('should scope findAll to session.user.id for regular users', async () => {
+      mockDetectionService.findAll = jest.fn().mockResolvedValue([]);
+      const regularSession = {
+        session: {
+          id: 's2',
+          userId: 'user-abc',
+          token: 'tok',
+          expiresAt: new Date(),
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        user: {
+          id: 'user-abc',
+          email: 'u@test.com',
+          emailVerified: true,
+          name: 'User',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          role: 'user',
+        },
+      } as unknown as UserSession;
+
+      await controller.findAll(
+        '10',
+        undefined,
+        undefined,
+        'user-xyz',
+        regularSession,
+      );
+
+      expect(mockDetectionService.findAll).toHaveBeenCalledWith({
+        limit: 10,
+        search: undefined,
+        deviceId: undefined,
+        userId: 'user-abc', // Scoped to user-abc, NOT user-xyz!
+      });
+    });
+
+    it('should allow admin to query detections across all users or filter by userId', async () => {
+      mockDetectionService.findAll = jest.fn().mockResolvedValue([]);
+      const adminSession = {
+        session: {
+          id: 's3',
+          userId: 'admin-1',
+          token: 'tok',
+          expiresAt: new Date(),
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        user: {
+          id: 'admin-1',
+          email: 'a@test.com',
+          emailVerified: true,
+          name: 'Admin',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          role: 'admin',
+        },
+      } as unknown as UserSession;
+
+      await controller.findAll(
+        '10',
+        undefined,
+        undefined,
+        'user-xyz',
+        adminSession,
+      );
+
+      expect(mockDetectionService.findAll).toHaveBeenCalledWith({
+        limit: 10,
+        search: undefined,
+        deviceId: undefined,
+        userId: 'user-xyz', // Admin can query requested userId
+      });
+    });
+
+    it('should prevent unauthenticated callers from reading other users data', async () => {
+      mockDetectionService.findAll = jest.fn().mockResolvedValue([]);
+
+      await controller.findAll(
+        '10',
+        undefined,
+        undefined,
+        'user-target',
+        undefined,
+      );
+
+      expect(mockDetectionService.findAll).toHaveBeenCalledWith({
+        limit: 10,
+        search: undefined,
+        deviceId: undefined,
+        userId: 'unauthorized_guest_target',
+      });
     });
   });
 });
