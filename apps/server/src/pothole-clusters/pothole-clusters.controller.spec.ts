@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { DbscanClusteringService } from './dbscan-clustering.service';
 import { PotholeClustersController } from './pothole-clusters.controller';
 import { PotholeClustersService } from './pothole-clusters.service';
 
@@ -12,6 +13,10 @@ describe('PotholeClustersController', () => {
     updateStatus: jest.fn(),
   };
 
+  const mockDbscanClusteringService = {
+    consolidateDetections: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [PotholeClustersController],
@@ -19,6 +24,10 @@ describe('PotholeClustersController', () => {
         {
           provide: PotholeClustersService,
           useValue: mockPotholeClustersService,
+        },
+        {
+          provide: DbscanClusteringService,
+          useValue: mockDbscanClusteringService,
         },
       ],
     }).compile();
@@ -102,6 +111,50 @@ describe('PotholeClustersController', () => {
         dto,
       );
       expect(result).toEqual(mockResult);
+    });
+  });
+
+  describe('getDbscanClusters', () => {
+    it('should call consolidateDetections on dbscanService and return consolidated clusters and heatmap', async () => {
+      const mockDbscanResponse = {
+        clusters: [
+          {
+            id: 'dbscan_1',
+            center_latitude: -6.2088,
+            center_longitude: 106.8456,
+            severity: 'high',
+            confidence_avg: 0.95,
+            detection_count: 5,
+            user_count: 3,
+            status: 'active',
+            first_detected_at: new Date(),
+            last_detected_at: new Date(),
+            updated_at: new Date(),
+            radius_meters: 15,
+            points: [],
+          },
+        ],
+        heatmap: [[-6.2088, 106.8456, 0.9]],
+        total_detections: 5,
+        total_clusters: 1,
+        generated_at: new Date().toISOString(),
+      };
+
+      mockDbscanClusteringService.consolidateDetections.mockResolvedValue(
+        mockDbscanResponse,
+      );
+
+      const result = await controller.getDbscanClusters('25', '1');
+
+      expect(
+        mockDbscanClusteringService.consolidateDetections,
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          epsMeters: 25,
+          minPts: 1,
+        }),
+      );
+      expect(result).toEqual(mockDbscanResponse);
     });
   });
 });
