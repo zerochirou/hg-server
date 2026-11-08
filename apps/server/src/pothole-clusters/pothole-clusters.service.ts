@@ -3,7 +3,11 @@ import { Prisma } from '@prisma/client';
 import { DbService } from '../db/db.service';
 import { BoundingBoxFilterDto } from './dto/bounding-box-filter.dto';
 import { UpdateClusterStatusDto } from './dto/update-cluster-status.dto';
-import { PotholeClusterEntity } from './entities/pothole-cluster.entity';
+import {
+  parseClusterSeverity,
+  PotholeClusterEntity,
+} from './entities/pothole-cluster.entity';
+import { calculatePhysicalSeverity } from './dbscan-clustering.service';
 
 @Injectable()
 export class PotholeClustersService {
@@ -58,7 +62,7 @@ export class PotholeClustersService {
       ? Prisma.sql`AND severity::text = ${severity}`
       : Prisma.empty;
 
-    return this.db.$queryRaw<PotholeClusterEntity[]>`
+    const rows = await this.db.$queryRaw<PotholeClusterEntity[]>`
       SELECT
         id,
         center_latitude,
@@ -78,6 +82,11 @@ export class PotholeClustersService {
       ORDER BY last_detected_at DESC
       LIMIT ${limit}
     `;
+
+    return rows.map((r) => ({
+      ...r,
+      severity: parseClusterSeverity(r.severity),
+    }));
   }
 
   /**
@@ -114,7 +123,11 @@ export class PotholeClustersService {
       LIMIT 1
     `;
 
-    return results[0] ?? null;
+    if (!results || results.length === 0) return null;
+    return {
+      ...results[0],
+      severity: parseClusterSeverity(results[0].severity),
+    };
   }
 
   /**
@@ -144,7 +157,10 @@ export class PotholeClustersService {
       );
     }
 
-    return results[0];
+    return {
+      ...results[0],
+      severity: parseClusterSeverity(results[0].severity),
+    };
   }
 
   /**
@@ -180,7 +196,10 @@ export class PotholeClustersService {
         updated_at
     `;
 
-    return updated;
+    return {
+      ...updated,
+      severity: parseClusterSeverity(updated.severity),
+    };
   }
 
   /**
@@ -230,7 +249,10 @@ export class PotholeClustersService {
         updated_at
     `;
 
-    return updated;
+    return {
+      ...updated,
+      severity: parseClusterSeverity(updated.severity),
+    };
   }
 
   /**
@@ -254,6 +276,7 @@ export class PotholeClustersService {
     latitude: number;
     longitude: number;
     confidence: number;
+    zAccelPeak?: number | null;
     detectedAt: Date;
   }) {
     try {
@@ -263,6 +286,10 @@ export class PotholeClustersService {
         15,
       );
 
+      const calculatedSeverity = calculatePhysicalSeverity(
+        detection.zAccelPeak,
+      );
+
       if (existing) {
         const newCount = (existing.detection_count || 1) + 1;
         const newConfidenceAvg =
@@ -270,11 +297,25 @@ export class PotholeClustersService {
             detection.confidence) /
           newCount;
 
+        // Eskalasi severity jika hentakan baru secara fisik lebih parah
+        const existingSev = parseClusterSeverity(existing.severity);
+        const severityRank: Record<string, number> = {
+          low: 1,
+          medium: 2,
+          high: 3,
+          severe: 4,
+        };
+        const escalatedSeverity =
+          severityRank[calculatedSeverity] > severityRank[existingSev]
+            ? calculatedSeverity
+            : existingSev;
+
         await this.db.$executeRaw`
           UPDATE pothole_clusters
           SET
             confidence_avg = ${newConfidenceAvg},
             detection_count = ${newCount},
+            severity = ${escalatedSeverity}::pothole_severity,
             last_detected_at = ${detection.detectedAt},
             updated_at = NOW()
           WHERE id::text = ${existing.id}
@@ -283,7 +324,29 @@ export class PotholeClustersService {
         return { action: 'updated', clusterId: existing.id };
       } else {
         const [newCluster] = await this.db.$queryRaw<{ id: string }[]>`
-          INSERT INTO pothole_clusters (\n            center_latitude,\n            center_longitude,\n            severity,\n            confidence_avg,\n            detection_count,\n            status,\n            first_detected_at,\n            last_detected_at,\n            updated_at\n          ) VALUES (\n            ${detection.latitude},\n            ${detection.longitude},\n            'medium'::pothole_severity,\n            ${detection.confidence},\n            1,\n            'active'::pothole_status,\n            ${detection.detectedAt},\n            ${detection.detectedAt},\n            NOW()\n          )\n          RETURNING id\n        `;
+          INSERT INTO pothole_clusters (
+            center_latitude,
+            center_longitude,
+            severity,
+            confidence_avg,
+            detection_count,
+            status,
+            first_detected_at,
+            last_detected_at,
+            updated_at
+          ) VALUES (
+            ${detection.latitude},
+            ${detection.longitude},
+            ${calculatedSeverity}::pothole_severity,
+            ${detection.confidence},
+            1,
+            'active'::pothole_status,
+            ${detection.detectedAt},
+            ${detection.detectedAt},
+            NOW()
+          )
+          RETURNING id
+        `;
         this.logger.log(`Created new pothole cluster: ${newCluster.id}`);
         return { action: 'created', clusterId: newCluster.id };
       }

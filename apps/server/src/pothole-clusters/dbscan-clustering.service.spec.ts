@@ -63,7 +63,7 @@ describe('DbscanClusteringService', () => {
           longitude: 106.8456,
           confidence: 0.92,
           speedKmh: 35.0,
-          zAccelPeak: 2.3,
+          zAccelPeak: 2.6,
           deviceId: 'device-A',
           userId: 'user-A',
           detectedAt: new Date('2026-11-01T10:00:00Z'),
@@ -119,7 +119,7 @@ describe('DbscanClusteringService', () => {
       const cluster1 = result.clusters.find((c) => c.detection_count === 3);
       expect(cluster1).toBeDefined();
       expect(cluster1?.user_count).toBe(3);
-      expect(cluster1?.severity).toBe('severe'); // zAccelPeak >= 2.2
+      expect(cluster1?.severity).toBe('severe'); // zAccelPeak >= 2.5
       expect(cluster1?.points.length).toBe(3);
 
       // Heatmap should contain points for all detections plus weighted centroids

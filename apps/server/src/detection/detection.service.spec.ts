@@ -87,6 +87,7 @@ describe('DetectionService', () => {
         latitude: dto.latitude,
         longitude: dto.longitude,
         confidence: dto.confidence,
+        zAccelPeak: dto.zAccelPeak,
         detectedAt: new Date(dto.detectedAt),
       });
 

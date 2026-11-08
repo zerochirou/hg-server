@@ -1,6 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { DbService } from '../db/db.service';
-import { PotholeClusterEntity } from './entities/pothole-cluster.entity';
+import {
+  ClusterSeverity,
+  parseClusterSeverity,
+  PotholeClusterEntity,
+} from './entities/pothole-cluster.entity';
 
 export interface DbscanPoint {
   id: string;
@@ -27,7 +31,75 @@ export interface ConsolidatedClusterPoint {
 }
 
 export const SEVERITY_LEVELS = ['low', 'medium', 'high', 'severe'] as const;
-export type SeverityLevel = (typeof SEVERITY_LEVELS)[number];
+export type SeverityLevel = ClusterSeverity;
+
+/** Status Validasi Deteksi (Strict Dual-Filter: Visual + Sensor) */
+export type DetectionValidationStatus =
+  | 'CONFIRMED'
+  | 'CONFIRMED_VIA_SENSOR'
+  | 'UNCERTAIN'
+  | 'REJECTED';
+
+/**
+ * 1. Tahap Klasifikasi & Validasi (Mencegah False Positive) — Strict Dual-Filter:
+ * - CONFIRMED (Lolos Utama): Jika confidence >= 0.70.
+ * - CONFIRMED VIA SENSOR: Jika 0.50 <= confidence < 0.70 DAN zAccelPeak >= 2.0.
+ * - UNCERTAIN (Butuh Konfirmasi DBSCAN): Jika 0.50 <= confidence < 0.70 DAN zAccelPeak < 2.0.
+ * - REJECTED (Noise/Bukan Lubang): Jika confidence < 0.50 ATAU (speedKmh > 60 dan zAccelPeak < 1.2).
+ */
+export function evaluateDetectionStatus(input: {
+  confidence: number;
+  zAccelPeak?: number | null;
+  speedKmh?: number | null;
+}): DetectionValidationStatus {
+  const { confidence, zAccelPeak, speedKmh } = input;
+  const peak =
+    zAccelPeak != null && !isNaN(zAccelPeak) ? Math.abs(zAccelPeak) : 0;
+
+  // 1. REJECTED:
+  // Jika confidence < 0.50 ATAU (kecepatan > 60 km/h tanpa hentakan nyata < 1.2G)
+  if (confidence < 0.5 || (speedKmh != null && speedKmh > 60.0 && peak < 1.2)) {
+    return 'REJECTED';
+  }
+
+  // 2. CONFIRMED (Lolos Utama):
+  if (confidence >= 0.7) {
+    return 'CONFIRMED';
+  }
+
+  // 3. CONFIRMED VIA SENSOR:
+  if (confidence >= 0.5 && peak >= 2.0) {
+    return 'CONFIRMED_VIA_SENSOR';
+  }
+
+  // 4. UNCERTAIN (Butuh Konfirmasi DBSCAN):
+  if (confidence >= 0.5 && peak < 2.0) {
+    return 'UNCERTAIN';
+  }
+
+  return 'REJECTED';
+}
+
+/**
+ * 2. Tahap Penentuan Severity (Berdasarkan Hentakan Fisik zAccelPeak):
+ * - severe: zAccelPeak >= 2.5
+ * - high: 1.8 <= zAccelPeak < 2.5
+ * - medium: 1.2 <= zAccelPeak < 1.8
+ * - low: zAccelPeak < 1.2 (atau jika zAccelPeak bernilai null/default)
+ */
+export function calculatePhysicalSeverity(
+  zAccelPeak?: number | null,
+): SeverityLevel {
+  if (zAccelPeak == null || isNaN(zAccelPeak)) {
+    return 'low';
+  }
+
+  const peak = Math.abs(zAccelPeak);
+  if (peak >= 2.5) return 'severe';
+  if (peak >= 1.8) return 'high';
+  if (peak >= 1.2) return 'medium';
+  return 'low';
+}
 
 export interface ConsolidatedCluster {
   id: string;
@@ -145,17 +217,77 @@ export class DbscanClusteringService {
       return this.fallbackFromExistingClusters(options);
     }
 
-    const points: DbscanPoint[] = rawDetections.map((d) => ({
-      id: d.id,
-      latitude: d.latitude,
-      longitude: d.longitude,
-      confidence: d.confidence,
-      speedKmh: d.speedKmh,
-      zAccelPeak: d.zAccelPeak,
-      deviceId: d.deviceId,
-      userId: d.userId,
-      detectedAt: d.detectedAt,
-    }));
+    // Saring raw detections menggunakan Strict Dual-Filter:
+    // - REJECTED: dibuang (noise)
+    // - CONFIRMED / CONFIRMED_VIA_SENSOR: lolos langsung
+    // - UNCERTAIN: butuh minimal 2-3 laporan dalam radius epsMeters
+    const confirmedPool: DbscanPoint[] = [];
+    const uncertainPool: DbscanPoint[] = [];
+
+    for (const d of rawDetections) {
+      const status = evaluateDetectionStatus({
+        confidence: d.confidence,
+        zAccelPeak: d.zAccelPeak,
+        speedKmh: d.speedKmh,
+      });
+
+      const pt: DbscanPoint = {
+        id: d.id,
+        latitude: d.latitude,
+        longitude: d.longitude,
+        confidence: d.confidence,
+        speedKmh: d.speedKmh,
+        zAccelPeak: d.zAccelPeak,
+        deviceId: d.deviceId,
+        userId: d.userId,
+        detectedAt: d.detectedAt,
+      };
+
+      if (status === 'CONFIRMED' || status === 'CONFIRMED_VIA_SENSOR') {
+        confirmedPool.push(pt);
+      } else if (status === 'UNCERTAIN') {
+        uncertainPool.push(pt);
+      }
+    }
+
+    // Evaluasi konsensus spasial untuk data UNCERTAIN:
+    // Hanya data UNCERTAIN yang memiliki minimal 2-3 laporan terkumpul di titik koordinat yang sama (radius epsMeters)
+    // yang boleh diproses menjadi klaster.
+    const allCandidates = [...confirmedPool, ...uncertainPool];
+    const approvedUncertain: DbscanPoint[] = [];
+    const minPtsForUncertain = 2; // minimal 2-3 laporan
+
+    for (const unc of uncertainPool) {
+      let neighborsCount = 0;
+      for (const other of allCandidates) {
+        if (
+          haversineDistanceMeters(
+            unc.latitude,
+            unc.longitude,
+            other.latitude,
+            other.longitude,
+          ) <= epsMeters
+        ) {
+          neighborsCount++;
+        }
+      }
+
+      if (neighborsCount >= minPtsForUncertain) {
+        approvedUncertain.push(unc);
+      }
+    }
+
+    const points: DbscanPoint[] = [...confirmedPool, ...approvedUncertain];
+
+    if (points.length === 0) {
+      return {
+        clusters: [],
+        heatmap: [],
+        total_detections: 0,
+        total_clusters: 0,
+        generated_at: new Date().toISOString(),
+      };
+    }
 
     // 3. Eksekusi Algoritma DBSCAN
     const pointGroups = this.executeDbscan(points, epsMeters, minPts);
@@ -172,8 +304,6 @@ export class DbscanClusteringService {
       let sumLon = 0;
       let sumConf = 0;
       let maxZ = 0;
-      let sumZ = 0;
-      let zCount = 0;
 
       const userSet = new Set<string>();
       let firstTime = group[0].detectedAt.getTime();
@@ -188,8 +318,6 @@ export class DbscanClusteringService {
 
         if (p.zAccelPeak != null) {
           maxZ = Math.max(maxZ, p.zAccelPeak);
-          sumZ += p.zAccelPeak;
-          zCount++;
         }
 
         const identifier = p.userId || p.deviceId || 'anon';
@@ -232,7 +360,6 @@ export class DbscanClusteringService {
       const centerLat = sumLat / count;
       const centerLon = sumLon / count;
       const confAvg = sumConf / count;
-      const avgZ = zCount > 0 ? sumZ / zCount : maxZ;
 
       // Hitung radius spasial klaster (jarak terjauh dari titik pusat)
       let maxDist = 8; // minimal 8 meter agar highlight area tampak jelas di map
@@ -246,17 +373,12 @@ export class DbscanClusteringService {
         if (dist > maxDist) maxDist = dist;
       }
 
-      // Tentukan tingkat keparahan (severity) berdasarkan zAccelPeak & confidence
-      let clusterSeverity: 'low' | 'medium' | 'high' | 'severe' = 'medium';
-      if (maxZ >= 2.2 || avgZ >= 1.8) {
-        clusterSeverity = 'severe';
-      } else if (maxZ >= 1.6 || avgZ >= 1.35) {
-        clusterSeverity = 'high';
-      } else if (maxZ >= 1.1 || avgZ >= 0.95) {
-        clusterSeverity = 'medium';
-      } else {
-        clusterSeverity = 'low';
-      }
+      // Tentukan tingkat keparahan (severity) murni berdasarkan puncak hentakan fisik zAccelPeak:
+      // severe: zAccelPeak >= 2.5
+      // high: 1.8 <= zAccelPeak < 2.5
+      // medium: 1.2 <= zAccelPeak < 1.8
+      // low: zAccelPeak < 1.2
+      const clusterSeverity: SeverityLevel = calculatePhysicalSeverity(maxZ);
 
       if (severity && clusterSeverity !== severity) {
         return;
@@ -465,7 +587,7 @@ export class DbscanClusteringService {
         id: c.id,
         center_latitude: c.center_latitude,
         center_longitude: c.center_longitude,
-        severity: c.severity as SeverityLevel,
+        severity: parseClusterSeverity(c.severity),
         confidence_avg: c.confidence_avg,
         detection_count: count,
         user_count: 1,

@@ -38,6 +38,7 @@ export class DetectionService {
       latitude: dto.latitude,
       longitude: dto.longitude,
       confidence: dto.confidence,
+      zAccelPeak: dto.zAccelPeak,
       detectedAt: detectedAtDate,
     });
 
@@ -71,6 +72,7 @@ export class DetectionService {
         latitude: item.latitude,
         longitude: item.longitude,
         confidence: item.confidence,
+        zAccelPeak: item.zAccelPeak,
         detectedAt: new Date(item.detectedAt),
       });
     }

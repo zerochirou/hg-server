@@ -1,7 +1,7 @@
 generator client {
   provider        = "prisma-client-js"
-  binaryTargets = ["native", "rhel-openssl-1.0.x", "rhel-openssl-3.0.x"]
   previewFeatures = ["postgresqlExtensions"]
+  binaryTargets   = ["native", "rhel-openssl-1.0.x", "rhel-openssl-3.0.x"]
 }
 
 datasource db {
@@ -10,18 +10,16 @@ datasource db {
 }
 
 model User {
-  id            String  @id
+  id            String    @id
   name          String?
-  email         String  @unique
-  emailVerified Boolean @map("email_verified")
+  email         String    @unique
+  emailVerified Boolean   @map("email_verified")
   image         String?
-  isOnboarded   Boolean @default(false) @map("is_onboarded")
-
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  sessions Session[]
-  accounts Account[]
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  isOnboarded   Boolean   @default(false) @map("is_onboarded")
+  accounts      Account[]
+  sessions      Session[]
 
   @@map("users")
 }
@@ -29,104 +27,92 @@ model User {
 model Session {
   id        String   @id
   expiresAt DateTime @map("expires_at")
-
-  token String @unique
-
+  token     String   @unique
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
-
-  ipAddress String? @map("ip_address")
-  userAgent String? @map("user_agent")
-
-  userId String @map("user_id")
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ipAddress String?  @map("ip_address")
+  userAgent String?  @map("user_agent")
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("sessions")
 }
 
 model Account {
-  id         String @id
-  accountId  String @map("account_id")
-  providerId String @map("provider_id")
-
-  userId String @map("user_id")
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
+  id                    String    @id
+  accountId             String    @map("account_id")
+  providerId            String    @map("provider_id")
+  userId                String    @map("user_id")
   accessToken           String?   @map("access_token")
   refreshToken          String?   @map("refresh_token")
-  idToken               String?   @map("id_token")
+  password              String?
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
   accessTokenExpiresAt  DateTime? @map("access_token_expires_at")
+  idToken               String?   @map("id_token")
   refreshTokenExpiresAt DateTime? @map("refresh_token_expires_at")
   scope                 String?   @map("scope")
-  password              String?
-
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  issuer    String?
+  issuer                String?
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("accounts")
 }
 
 model Verification {
-  id String @id
-
+  id         String    @id
   identifier String
   value      String
-
-  expiresAt DateTime  @map("expires_at")
-  createdAt DateTime? @default(now()) @map("created_at")
-  updatedAt DateTime? @updatedAt @map("updated_at")
+  expiresAt  DateTime  @map("expires_at")
+  createdAt  DateTime? @default(now()) @map("created_at")
+  updatedAt  DateTime? @updatedAt @map("updated_at")
 
   @@map("verifications")
 }
 
-// ----------------------------------------------------
-// Detections Model
-// ----------------------------------------------------
 model Detection {
-  id        String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  deviceId  String  @map("device_id") @db.VarChar(100)
-  userId    String? @map("user_id")
-  latitude  Float   @map("latitude")
-  longitude Float   @map("longitude")
-
-  // PostGIS Generated Column
-  location Unsupported("geometry(Point, 4326)")? @map("location")
-
-  confidence   Float    @map("confidence")
-  speedKmh     Float?   @map("speed_kmh")
-  zAccelPeak   Float?   @map("z_accel_peak")
-  modelVersion String   @default("v1") @map("model_version") @db.VarChar(100)
-  detectedAt   DateTime @map("detected_at") @db.Timestamptz
-  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+  id           String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  deviceId     String                   @map("device_id") @db.VarChar(100)
+  userId       String?                  @map("user_id")
+  latitude     Float                    @map("latitude")
+  longitude    Float                    @map("longitude")
+  location     Unsupported("geometry")? @map("location")
+  confidence   Float                    @map("confidence")
+  speedKmh     Float?                   @map("speed_kmh")
+  zAccelPeak   Float?                   @map("z_accel_peak")
+  modelVersion String                   @default("v1") @map("model_version") @db.VarChar(100)
+  detectedAt   DateTime                 @map("detected_at") @db.Timestamptz(6)
+  createdAt    DateTime                 @default(now()) @map("created_at") @db.Timestamptz(6)
 
   @@index([deviceId, detectedAt], map: "idx_detections_device_time")
-  @@index([location], type: Gist, map: "idx_detections_location")
+  @@index([location], map: "idx_detections_location", type: Gist)
   @@map("detections")
 }
 
-// ----------------------------------------------------
-// Pothole Clusters Model
-// ----------------------------------------------------
 model PotholeCluster {
-  id              String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  centerLatitude  Float  @map("center_latitude")
-  centerLongitude Float  @map("center_longitude")
+  id              String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  centerLatitude  Float                    @map("center_latitude")
+  centerLongitude Float                    @map("center_longitude")
+  centerLocation  Unsupported("geometry")? @map("center_location")
+  severity        PotholeSeverity          @default(medium) @map("severity")
+  confidenceAvg   Float                    @map("confidence_avg")
+  detectionCount  Int?                     @default(1) @map("detection_count")
+  status          PotholeStatus            @default(active) @map("status")
+  firstDetectedAt DateTime                 @map("first_detected_at") @db.Timestamptz(6)
+  lastDetectedAt  DateTime                 @map("last_detected_at") @db.Timestamptz(6)
+  updatedAt       DateTime                 @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  // PostGIS Generated Column
-  centerLocation Unsupported("geometry(Point, 4326)")? @map("center_location")
-
-  severity        PotholeSeverity @default(medium) @map("severity")
-  confidenceAvg   Float           @map("confidence_avg")
-  detectionCount  Int?            @default(1) @map("detection_count")
-  status          PotholeStatus   @default(active) @map("status")
-  firstDetectedAt DateTime        @map("first_detected_at") @db.Timestamptz
-  lastDetectedAt  DateTime        @map("last_detected_at") @db.Timestamptz
-  updatedAt       DateTime        @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
-
-  @@index([centerLocation], type: Gist, map: "idx_potholes_location")
+  @@index([centerLocation], map: "idx_potholes_location", type: Gist)
   @@index([status], map: "idx_potholes_status")
   @@map("pothole_clusters")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model spatial_ref_sys {
+  srid      Int     @id
+  auth_name String? @db.VarChar(256)
+  auth_srid Int?
+  srtext    String? @db.VarChar(2048)
+  proj4text String? @db.VarChar(2048)
 }
 
 enum PotholeSeverity {

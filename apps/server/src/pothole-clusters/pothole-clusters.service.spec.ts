@@ -68,6 +68,7 @@ describe('PotholeClustersService', () => {
         id: 'uuid-1',
         center_latitude: -6.2088,
         center_longitude: 106.8456,
+        severity: 'medium',
         distance_meters: 6.4,
       };
       mockDb.$queryRaw.mockResolvedValue([mockCluster]);
@@ -89,7 +90,11 @@ describe('PotholeClustersService', () => {
 
   describe('getById', () => {
     it('should return cluster if exists', async () => {
-      const mockCluster = { id: 'uuid-1', center_latitude: -6.2088 };
+      const mockCluster = {
+        id: 'uuid-1',
+        center_latitude: -6.2088,
+        severity: 'medium',
+      };
       mockDb.$queryRaw.mockResolvedValue([mockCluster]);
 
       const result = await service.getById('uuid-1');
