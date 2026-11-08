@@ -39,7 +39,7 @@ export class PotholeClustersController {
   ) {
     return this.dbscanService.consolidateDetections({
       epsMeters: eps ? parseFloat(eps) : 100,
-      minPts: minPts ? parseInt(minPts, 10) : 1,
+      minPts: minPts ? parseInt(minPts, 10) : 2,
       vehicleType,
       minLat: minLat ? parseFloat(minLat) : undefined,
       minLon: minLon ? parseFloat(minLon) : undefined,

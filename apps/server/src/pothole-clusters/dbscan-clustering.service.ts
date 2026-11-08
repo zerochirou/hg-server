@@ -295,7 +295,7 @@ export class DbscanClusteringService {
   }): Promise<DbscanConsolidationResponse> {
     const {
       epsMeters = 100,
-      minPts = 1,
+      minPts = 2,
       vehicleType,
       minLat,
       minLon,
@@ -615,10 +615,8 @@ export class DbscanClusteringService {
       const neighbors = getNeighbors(i);
 
       if (neighbors.length < minPts) {
-        // Titik terisolasi: tetap dijadikan 1 klaster mikro beranggotakan 1 titik
-        assigned[i] = clusterId;
-        clusters.push([points[i]]);
-        clusterId++;
+        // Titik terisolasi / tidak memenuhi ambang konfirmasi: tandai sebagai NOISE
+        assigned[i] = -2;
       } else {
         // Core point: perluas klaster kepadatan tinggi
         const currentGroup: DbscanPoint[] = [points[i]];
@@ -642,7 +640,8 @@ export class DbscanClusteringService {
             }
           }
 
-          if (assigned[neighborIdx] === -1) {
+          // Tetangga yang belum di-assign (termasuk yang sebelumnya ditandai noise) diserap ke klaster
+          if (assigned[neighborIdx] < 0) {
             assigned[neighborIdx] = clusterId;
             currentGroup.push(points[neighborIdx]);
           }
@@ -661,6 +660,8 @@ export class DbscanClusteringService {
    * membaca dari pothole_clusters dan membentuk heatmap berbasis sentroid.
    */
   private async fallbackFromExistingClusters(options?: {
+    epsMeters?: number;
+    minPts?: number;
     minLat?: number;
     minLon?: number;
     maxLat?: number;
@@ -688,9 +689,27 @@ export class DbscanClusteringService {
 
     const clusters: ConsolidatedCluster[] = [];
     const heatmap: Array<[number, number, number]> = [];
+    const minRequiredPts = options?.minPts ?? 2;
 
     existing.forEach((c) => {
       const count = c.detection_count || 1;
+
+      // Jika data berdiri sendiri (< minRequiredPts) dan tidak memiliki tetangga dalam radius eps, anggap sebagai noise
+      if (minRequiredPts > 1 && count < minRequiredPts) {
+        const hasNeighbor = existing.some((other) => {
+          if (other.id === c.id) return false;
+          return (
+            haversineDistanceMeters(
+              c.center_latitude,
+              c.center_longitude,
+              other.center_latitude,
+              other.center_longitude,
+            ) <= (options?.epsMeters || 100)
+          );
+        });
+        if (!hasNeighbor) return;
+      }
+
       const intensity = Math.min(1.0, Math.max(0.4, c.confidence_avg));
 
       // Buat titik representatif klaster
