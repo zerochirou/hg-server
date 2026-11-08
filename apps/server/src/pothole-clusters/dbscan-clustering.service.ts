@@ -176,6 +176,8 @@ export interface ConsolidatedCluster {
   last_detected_at: Date;
   updated_at: Date;
   radius_meters: number;
+  road_length_meters?: number;
+  road_segment_coords?: Array<{ latitude: number; longitude: number }>;
   points: ConsolidatedClusterPoint[];
 }
 
@@ -207,6 +209,63 @@ export function haversineDistanceMeters(
       Math.sin(dLon / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
+}
+
+/**
+ * Mengurutkan titik-titik deteksi di dalam klaster secara linier di sepanjang koridor ruas jalan.
+ * Menggunakan proyeksi vektor bentang terjauh (Principal Road Span Projection).
+ */
+export function sortPointsAlongRoadSegment<
+  T extends { latitude: number; longitude: number },
+>(points: T[]): T[] {
+  const n = points.length;
+  if (n <= 1) return [...points];
+  if (n === 2) return [...points];
+
+  // 1. Temukan dua titik dengan jarak terjauh sebagai ujung awal dan ujung akhir ruas jalan
+  let maxDist = -1;
+  let endA = 0;
+  let endB = 1;
+
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      const d = haversineDistanceMeters(
+        points[i].latitude,
+        points[i].longitude,
+        points[j].latitude,
+        points[j].longitude,
+      );
+      if (d > maxDist) {
+        maxDist = d;
+        endA = i;
+        endB = j;
+      }
+    }
+  }
+
+  const pA = points[endA];
+  const pB = points[endB];
+  const midLatRad = ((pA.latitude + pB.latitude) / 2) * (Math.PI / 180);
+  const cosLat = Math.cos(midLatRad);
+
+  const dx = (pB.longitude - pA.longitude) * cosLat;
+  const dy = pB.latitude - pA.latitude;
+  const lenSq = dx * dx + dy * dy;
+
+  if (lenSq < 1e-12) return [...points];
+
+  // 2. Proyeksikan setiap titik ke vektor sumbu ruas jalan
+  return [...points].sort((p1, p2) => {
+    const t1 =
+      ((p1.longitude - pA.longitude) * cosLat * dx +
+        (p1.latitude - pA.latitude) * dy) /
+      lenSq;
+    const t2 =
+      ((p2.longitude - pA.longitude) * cosLat * dx +
+        (p2.latitude - pA.latitude) * dy) /
+      lenSq;
+    return t1 - t2;
+  });
 }
 
 @Injectable()
@@ -452,6 +511,23 @@ export class DbscanClusteringService {
         return;
       }
 
+      // Hitung panjang bentang ruas jalan (road length) dan koordinat polyline jalan
+      const sortedAlongRoad = sortPointsAlongRoadSegment(group);
+      let cumulativeRoadLen = 0;
+      for (let i = 0; i < sortedAlongRoad.length - 1; i++) {
+        cumulativeRoadLen += haversineDistanceMeters(
+          sortedAlongRoad[i].latitude,
+          sortedAlongRoad[i].longitude,
+          sortedAlongRoad[i + 1].latitude,
+          sortedAlongRoad[i + 1].longitude,
+        );
+      }
+      const roadLengthMeters = Math.max(15, Math.round(cumulativeRoadLen));
+      const roadSegmentCoords = sortedAlongRoad.map((p) => ({
+        latitude: Math.round(p.latitude * 1e7) / 1e7,
+        longitude: Math.round(p.longitude * 1e7) / 1e7,
+      }));
+
       // Jika klaster memiliki banyak laporan, tambahkan titik bobot tambahan di centroid ke heatmap
       if (count >= 2) {
         const centroidIntensity = Math.min(1.0, 0.6 + count * 0.08);
@@ -475,6 +551,8 @@ export class DbscanClusteringService {
         last_detected_at: new Date(lastTime),
         updated_at: new Date(lastTime),
         radius_meters: Math.round(maxDist * 10) / 10,
+        road_length_meters: roadLengthMeters,
+        road_segment_coords: roadSegmentCoords,
         points: clusterPoints,
       });
     });
@@ -664,6 +742,12 @@ export class DbscanClusteringService {
         last_detected_at: new Date(c.last_detected_at),
         updated_at: new Date(c.updated_at),
         radius_meters: 12,
+        road_length_meters:
+          count > 1 ? Math.min(100, Math.round(count * 12)) : 15,
+        road_segment_coords: syntheticPoints.map((p) => ({
+          latitude: p.latitude,
+          longitude: p.longitude,
+        })),
         points: syntheticPoints,
       });
     });
