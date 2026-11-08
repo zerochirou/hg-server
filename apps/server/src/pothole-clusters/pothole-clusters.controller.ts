@@ -22,12 +22,13 @@ export class PotholeClustersController {
    * Endpoint Konsolidasi DBSCAN & Heatmap:
    * Mengonsolidasikan deteksi akumulasi lintas pengguna menjadi titik tunggal
    * dan menyajikan array heatmap untuk render instan pada peta.
-   * GET /pothole-clusters/dbscan?eps=25&minPts=1
+   * GET /pothole-clusters/dbscan?eps=100&minPts=1&vehicleType=car
    */
   @Get('dbscan')
   async getDbscanClusters(
     @Query('eps') eps?: string,
     @Query('minPts') minPts?: string,
+    @Query('vehicleType') vehicleType?: string,
     @Query('minLat') minLat?: string,
     @Query('minLon') minLon?: string,
     @Query('maxLat') maxLat?: string,
@@ -37,8 +38,9 @@ export class PotholeClustersController {
     @Query('limit') limit?: string,
   ) {
     return this.dbscanService.consolidateDetections({
-      epsMeters: eps ? parseFloat(eps) : 25,
+      epsMeters: eps ? parseFloat(eps) : 100,
       minPts: minPts ? parseInt(minPts, 10) : 1,
+      vehicleType,
       minLat: minLat ? parseFloat(minLat) : undefined,
       minLon: minLon ? parseFloat(minLon) : undefined,
       maxLat: maxLat ? parseFloat(maxLat) : undefined,

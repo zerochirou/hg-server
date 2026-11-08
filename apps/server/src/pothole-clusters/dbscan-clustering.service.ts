@@ -80,24 +80,86 @@ export function evaluateDetectionStatus(input: {
   return 'REJECTED';
 }
 
+export type VehicleType = 'car' | 'motor' | 'bicycle';
+
 /**
- * 2. Tahap Penentuan Severity (Berdasarkan Hentakan Fisik zAccelPeak):
- * - severe: zAccelPeak >= 2.5
- * - high: 1.8 <= zAccelPeak < 2.5
- * - medium: 1.2 <= zAccelPeak < 1.8
- * - low: zAccelPeak < 1.2 (atau jika zAccelPeak bernilai null/default)
+ * Konfigurasi ambang batas hentakan minimum dan severity per jenis kendaraan.
+ * Menyesuaikan karakteristik suspensi dan dinamika laju kendaraan:
+ * - Mobil (Car): Suspensi hidrolik lembut meredam hentakan.
+ * - Sepeda Motor (Motor): Stang/mount langsung ke suspensi teleskopik & getaran mesin.
+ * - Sepeda (Bicycle): Kecepatan lebih rendah, getaran jalan langsung terasa di frame kaku.
+ */
+export const VEHICLE_SHOCK_PROFILES: Record<
+  VehicleType,
+  {
+    minShockThreshold: number;
+    severityThresholds: { severe: number; high: number; medium: number };
+  }
+> = {
+  car: {
+    minShockThreshold: 1.1,
+    severityThresholds: { severe: 2.2, high: 1.6, medium: 1.1 },
+  },
+  motor: {
+    minShockThreshold: 1.45,
+    severityThresholds: { severe: 2.8, high: 2.0, medium: 1.45 },
+  },
+  bicycle: {
+    minShockThreshold: 1.15,
+    severityThresholds: { severe: 2.3, high: 1.7, medium: 1.15 },
+  },
+};
+
+export const DEFAULT_PHYSICAL_SEVERITY_THRESHOLDS = {
+  minShockThreshold: 1.2,
+  severe: 2.5,
+  high: 1.8,
+  medium: 1.2,
+};
+
+export function getVehicleShockConfig(vehicleType?: string | null) {
+  if (!vehicleType) return DEFAULT_PHYSICAL_SEVERITY_THRESHOLDS;
+  const key = vehicleType.toLowerCase().trim();
+  if (key === 'car' || key === 'mobil') {
+    return {
+      minShockThreshold: VEHICLE_SHOCK_PROFILES.car.minShockThreshold,
+      ...VEHICLE_SHOCK_PROFILES.car.severityThresholds,
+    };
+  }
+  if (key === 'motor' || key === 'motorcycle' || key === 'motorbike') {
+    return {
+      minShockThreshold: VEHICLE_SHOCK_PROFILES.motor.minShockThreshold,
+      ...VEHICLE_SHOCK_PROFILES.motor.severityThresholds,
+    };
+  }
+  if (key === 'bicycle' || key === 'sepeda' || key === 'bike') {
+    return {
+      minShockThreshold: VEHICLE_SHOCK_PROFILES.bicycle.minShockThreshold,
+      ...VEHICLE_SHOCK_PROFILES.bicycle.severityThresholds,
+    };
+  }
+  return DEFAULT_PHYSICAL_SEVERITY_THRESHOLDS;
+}
+
+/**
+ * 2. Tahap Penentuan Severity Fleksibel (Berdasarkan Hentakan Fisik zAccelPeak & Jenis Kendaraan):
+ * Jika vehicleType ditentukan, menggunakan ambang batas kalibrasi kendaraan tersebut.
+ * Jika tidak, menggunakan batas default terkalibrasi (severe >= 2.5, high >= 1.8, medium >= 1.2).
  */
 export function calculatePhysicalSeverity(
   zAccelPeak?: number | null,
+  vehicleType?: string | null,
 ): SeverityLevel {
   if (zAccelPeak == null || isNaN(zAccelPeak)) {
     return 'low';
   }
 
   const peak = Math.abs(zAccelPeak);
-  if (peak >= 2.5) return 'severe';
-  if (peak >= 1.8) return 'high';
-  if (peak >= 1.2) return 'medium';
+  const cfg = getVehicleShockConfig(vehicleType);
+
+  if (peak >= cfg.severe) return 'severe';
+  if (peak >= cfg.high) return 'high';
+  if (peak >= cfg.medium) return 'medium';
   return 'low';
 }
 
@@ -156,12 +218,14 @@ export class DbscanClusteringService {
   /**
    * Mengonsolidasikan seluruh data deteksi lintas pengguna menggunakan algoritma DBSCAN
    * Parameter:
-   *  - epsMeters: radius kedekatan titik (default: 25 meter)
+   *  - epsMeters: radius kedekatan titik (default: 100 meter untuk jangkauan area luas)
    *  - minPts: batas minimum titik untuk klaster padat (default: 1 agar semua titik tervalidasi)
+   *  - vehicleType: jenis kendaraan ('car' | 'motor' | 'bicycle') untuk kalibrasi severity
    */
   async consolidateDetections(options?: {
     epsMeters?: number;
     minPts?: number;
+    vehicleType?: string;
     minLat?: number;
     minLon?: number;
     maxLat?: number;
@@ -171,8 +235,9 @@ export class DbscanClusteringService {
     limit?: number;
   }): Promise<DbscanConsolidationResponse> {
     const {
-      epsMeters = 25,
+      epsMeters = 100,
       minPts = 1,
+      vehicleType,
       minLat,
       minLon,
       maxLat,
@@ -378,7 +443,10 @@ export class DbscanClusteringService {
       // high: 1.8 <= zAccelPeak < 2.5
       // medium: 1.2 <= zAccelPeak < 1.8
       // low: zAccelPeak < 1.2
-      const clusterSeverity: SeverityLevel = calculatePhysicalSeverity(maxZ);
+      const clusterSeverity: SeverityLevel = calculatePhysicalSeverity(
+        maxZ,
+        vehicleType,
+      );
 
       if (severity && clusterSeverity !== severity) {
         return;

@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { DbService } from '../db/db.service';
 import {
+  calculatePhysicalSeverity,
   DbscanClusteringService,
   haversineDistanceMeters,
 } from './dbscan-clustering.service';
@@ -124,6 +125,68 @@ describe('DbscanClusteringService', () => {
 
       // Heatmap should contain points for all detections plus weighted centroids
       expect(result.heatmap.length).toBeGreaterThanOrEqual(4);
+    });
+
+    it('should default to 100m epsMeters when not specified', async () => {
+      // 2 points ~80 meters apart (should be merged under 100m eps)
+      const mockDetections = [
+        {
+          id: 'det-a',
+          latitude: -6.2088,
+          longitude: 106.8456,
+          confidence: 0.9,
+          speedKmh: 30.0,
+          zAccelPeak: 2.0,
+          deviceId: 'dev-1',
+          userId: 'u1',
+          detectedAt: new Date('2026-11-01T10:00:00Z'),
+        },
+        {
+          id: 'det-b',
+          latitude: -6.2082, // ~67 meters north
+          longitude: 106.8456,
+          confidence: 0.88,
+          speedKmh: 30.0,
+          zAccelPeak: 1.5,
+          deviceId: 'dev-2',
+          userId: 'u2',
+          detectedAt: new Date('2026-11-01T10:05:00Z'),
+        },
+      ];
+
+      mockDb.detection.findMany.mockResolvedValue(mockDetections);
+
+      const result = await service.consolidateDetections();
+      expect(result.clusters.length).toBe(1);
+      expect(result.clusters[0].detection_count).toBe(2);
+    });
+  });
+
+  describe('calculatePhysicalSeverity', () => {
+    it('should adapt severity thresholds dynamically per vehicle type', () => {
+      // Car: severe >= 2.2, high >= 1.6, medium >= 1.1
+      expect(calculatePhysicalSeverity(2.25, 'car')).toBe('severe');
+      expect(calculatePhysicalSeverity(1.7, 'car')).toBe('high');
+      expect(calculatePhysicalSeverity(1.15, 'car')).toBe('medium');
+      expect(calculatePhysicalSeverity(0.9, 'car')).toBe('low');
+
+      // Motor: severe >= 2.8, high >= 2.0, medium >= 1.45
+      expect(calculatePhysicalSeverity(2.25, 'motor')).toBe('high'); // In car 2.25 is severe, but in motor it is high!
+      expect(calculatePhysicalSeverity(2.85, 'motor')).toBe('severe');
+      expect(calculatePhysicalSeverity(1.5, 'motor')).toBe('medium');
+      expect(calculatePhysicalSeverity(1.2, 'motor')).toBe('low');
+
+      // Bicycle: severe >= 2.3, high >= 1.7, medium >= 1.15
+      expect(calculatePhysicalSeverity(2.35, 'bicycle')).toBe('severe');
+      expect(calculatePhysicalSeverity(1.8, 'bicycle')).toBe('high');
+      expect(calculatePhysicalSeverity(1.2, 'bicycle')).toBe('medium');
+      expect(calculatePhysicalSeverity(1.0, 'bicycle')).toBe('low');
+
+      // Default (no vehicle specified)
+      expect(calculatePhysicalSeverity(2.6)).toBe('severe');
+      expect(calculatePhysicalSeverity(1.9)).toBe('high');
+      expect(calculatePhysicalSeverity(1.3)).toBe('medium');
+      expect(calculatePhysicalSeverity(1.0)).toBe('low');
     });
   });
 });
