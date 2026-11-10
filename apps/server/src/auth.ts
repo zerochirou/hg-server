@@ -45,6 +45,7 @@ export const auth = betterAuth({
     'exp://10.0.2.2:*/**',
     'exp://localhost:*/**',
     'hypergrid://',
+    'hg-mobile-beta://',
     ...(process.env.NODE_ENV === 'development'
       ? [
           'exp://', // Trust any host of the exp:// scheme
