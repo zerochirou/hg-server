@@ -87,6 +87,10 @@
       "**/*.(t|j)s"
     ],
     "coverageDirectory": "../coverage",
-    "testEnvironment": "node"
+    "testEnvironment": "node",
+    "moduleNameMapper": {
+      "^@thallesp/nestjs-better-auth$": "<rootDir>/../test/mocks/nestjs-better-auth.ts",
+      "^\\.\\.?/auth$": "<rootDir>/../test/mocks/auth.ts"
+    }
   }
 }

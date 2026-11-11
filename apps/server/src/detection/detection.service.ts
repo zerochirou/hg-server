@@ -93,8 +93,8 @@ export class DetectionService {
 
     return this.db.detection.findMany({
       where: {
+        ...(userId !== undefined ? { userId } : {}),
         ...(deviceId ? { deviceId } : {}),
-        ...(userId ? { userId } : {}),
         ...(search
           ? {
               OR: [
@@ -136,11 +136,14 @@ export class DetectionService {
   }
 
   /**
-   * Mengambil riwayat deteksi berdasarkan deviceId
+   * Mengambil riwayat deteksi berdasarkan deviceId (dengan opsi filter userId)
    */
-  async findByDeviceId(deviceId: string, limit = 50) {
+  async findByDeviceId(deviceId: string, limit = 50, userId?: string) {
     return this.db.detection.findMany({
-      where: { deviceId },
+      where: {
+        deviceId,
+        ...(userId !== undefined ? { userId } : {}),
+      },
       orderBy: { detectedAt: 'desc' },
       take: limit,
     });

@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Delete,
+  ForbiddenException,
   Get,
   HttpCode,
   HttpStatus,
@@ -9,22 +10,14 @@ import {
   Patch,
   Post,
   Query,
-  Req,
 } from '@nestjs/common';
-import type { Request } from 'express';
+import { OptionalAuth, Session } from '@thallesp/nestjs-better-auth';
+import type { UserSession } from '@thallesp/nestjs-better-auth';
 import { DetectionService } from './detection.service';
 import { CreateBatchDetectionDto } from './dto/create-batch-detection.dto';
 import { CreateDetectionDto } from './dto/create-detection.dto';
 
-/** Extend Express Request with Better-Auth session shape */
-interface AuthRequest extends Request {
-  session?: {
-    user?: {
-      id?: string;
-    };
-  };
-}
-
+@OptionalAuth()
 @Controller('detections')
 export class DetectionController {
   constructor(private readonly detectionService: DetectionService) {}
@@ -33,24 +26,32 @@ export class DetectionController {
   @HttpCode(HttpStatus.CREATED)
   async create(
     @Body() createDetectionDto: CreateDetectionDto,
-    @Req() req?: AuthRequest,
+    @Session() session?: UserSession,
   ) {
-    const userId: string | undefined = req?.session?.user?.id;
-    return userId
-      ? this.detectionService.create(createDetectionDto, userId)
-      : this.detectionService.create(createDetectionDto);
+    if (session?.user?.id) {
+      const isAdmin = session.user.role === 'admin';
+      if (!isAdmin || !createDetectionDto.userId) {
+        createDetectionDto.userId = session.user.id;
+      }
+    }
+    return this.detectionService.create(createDetectionDto);
   }
 
   @Post('batch')
   @HttpCode(HttpStatus.CREATED)
   async createBatch(
     @Body() createBatchDetectionDto: CreateBatchDetectionDto,
-    @Req() req?: AuthRequest,
+    @Session() session?: UserSession,
   ) {
-    const userId: string | undefined = req?.session?.user?.id;
-    return userId
-      ? this.detectionService.createBatch(createBatchDetectionDto, userId)
-      : this.detectionService.createBatch(createBatchDetectionDto);
+    if (session?.user?.id) {
+      const isAdmin = session.user.role === 'admin';
+      for (const det of createBatchDetectionDto.detections) {
+        if (!isAdmin || !det.userId) {
+          det.userId = session.user.id;
+        }
+      }
+    }
+    return this.detectionService.createBatch(createBatchDetectionDto);
   }
 
   @Get()
@@ -59,12 +60,31 @@ export class DetectionController {
     @Query('search') search?: string,
     @Query('deviceId') deviceId?: string,
     @Query('userId') userId?: string,
+    @Session() session?: UserSession,
   ) {
+    const isAdmin = session?.user?.role === 'admin';
+    let targetUserId: string | undefined = undefined;
+
+    if (session?.user?.id) {
+      if (isAdmin) {
+        targetUserId = userId;
+      } else {
+        // Enforce user isolation: regular user can only view their own detections
+        targetUserId = session.user.id;
+      }
+    } else if (deviceId) {
+      // Unauthenticated caller can query by their deviceId
+      targetUserId = undefined;
+    } else if (userId) {
+      // Unauthenticated caller cannot query private user detections
+      targetUserId = 'unauthorized_guest_target';
+    }
+
     return this.detectionService.findAll({
       limit: limit ? parseInt(limit, 10) : 100,
       search,
       deviceId,
-      userId,
+      userId: targetUserId,
     });
   }
 
@@ -72,7 +92,14 @@ export class DetectionController {
   async findByUserId(
     @Param('userId') userId: string,
     @Query('limit') limit?: string,
+    @Session() session?: UserSession,
   ) {
+    const isAdmin = session?.user?.role === 'admin';
+    if (!session?.user?.id || (!isAdmin && session.user.id !== userId)) {
+      throw new ForbiddenException(
+        'You do not have permission to view detections for this user',
+      );
+    }
     return this.detectionService.findByUserId(
       userId,
       limit ? parseInt(limit, 10) : 100,
@@ -80,13 +107,33 @@ export class DetectionController {
   }
 
   @Get('device/:deviceId')
-  async findByDeviceId(@Param('deviceId') deviceId: string) {
+  async findByDeviceId(
+    @Param('deviceId') deviceId: string,
+    @Session() session?: UserSession,
+  ) {
+    const isAdmin = session?.user?.role === 'admin';
+    const userId = !isAdmin && session?.user?.id ? session.user.id : undefined;
+    if (userId) {
+      return this.detectionService.findByDeviceId(deviceId, 50, userId);
+    }
     return this.detectionService.findByDeviceId(deviceId);
   }
 
   @Get(':id')
-  async findById(@Param('id') id: string) {
-    return this.detectionService.findById(id);
+  async findById(@Param('id') id: string, @Session() session?: UserSession) {
+    const detection = await this.detectionService.findById(id);
+    const isAdmin = session?.user?.role === 'admin';
+    if (
+      session?.user?.id &&
+      !isAdmin &&
+      detection.userId &&
+      detection.userId !== session.user.id
+    ) {
+      throw new ForbiddenException(
+        'You do not have permission to view this detection',
+      );
+    }
+    return detection;
   }
 
   @Patch(':id')
@@ -102,12 +149,37 @@ export class DetectionController {
       latitude?: number;
       longitude?: number;
     },
+    @Session() session?: UserSession,
   ) {
+    const existing = await this.detectionService.findById(id);
+    const isAdmin = session?.user?.role === 'admin';
+    if (
+      session?.user?.id &&
+      !isAdmin &&
+      existing.userId &&
+      existing.userId !== session.user.id
+    ) {
+      throw new ForbiddenException(
+        'You do not have permission to modify this detection',
+      );
+    }
     return this.detectionService.update(id, dto);
   }
 
   @Delete(':id')
-  async delete(@Param('id') id: string) {
+  async delete(@Param('id') id: string, @Session() session?: UserSession) {
+    const existing = await this.detectionService.findById(id);
+    const isAdmin = session?.user?.role === 'admin';
+    if (
+      session?.user?.id &&
+      !isAdmin &&
+      existing.userId &&
+      existing.userId !== session.user.id
+    ) {
+      throw new ForbiddenException(
+        'You do not have permission to delete this detection',
+      );
+    }
     return this.detectionService.delete(id);
   }
 }

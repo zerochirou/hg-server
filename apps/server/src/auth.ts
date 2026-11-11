@@ -49,10 +49,13 @@ export const auth = betterAuth({
     'http://localhost:8081',
     'http://127.0.0.1:8081',
 
-    // Native Custom Schemes for HyperGrid Mobile App (Production, Staging, Dev Client)
+    // Native Custom Schemes for HyperGrid Mobile App (Production, Staging, Dev Client, Beta)
     'hypergrid://',
     'hypergrid://*',
     'hypergrid://**',
+    'hg-mobile-beta://',
+    'hg-mobile-beta://*',
+    'hg-mobile-beta://**',
 
     // Expo Go / Dev Client Schemes (All environments & local network IPs)
     'exp://',
