@@ -1,0 +1,16 @@
+node_modules
+.next
+dist
+coverage
+.turbo
+.git
+.husky
+.agents
+.gemini
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.DS_Store
+*.tsbuildinfo
